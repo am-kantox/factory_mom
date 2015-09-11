@@ -92,6 +92,18 @@ describe FactoryMom do
       expect(subject.string(strip: true)).to match /\S.+\S/
       expect(subject.string(strip: false)).to match /\s.+\s/
     end
+
+    it 'generates counter properly' do
+      expect(subject.counter.length).to eq 2
+      expect(subject.counter(length: 5).length).to eq 5
+      expect(subject.counter(owner: :aleksei)).to eq '01'
+      # subsequent execution
+      expect(subject.counter(owner: :aleksei)).to eq '02'
+      9.times { subject.counter(owner: :hex, base: 16) }
+      expect(subject.counter(owner: :hex, base: 16)).to eq '0A'
+      expect { 99.times { subject.counter(owner: :overflow) } }.not_to raise_error
+      expect { 100.times { subject.counter(owner: :overflow) } }.to raise_error(FactoryMom::MomFail)
+    end
   end
 
 end
