@@ -1,8 +1,7 @@
 module FactoryMom
   class ActiveRecordBase < Diagnostics
     def initialize
-
-      super({:'ActiveRecord::Base' => lambda { |model| puts "Hooked #{model}!" }})
+      super({:'ActiveRecord::Base' => lambda { |model| @hook.call(model) if @hook }})
     end
 
     def hook

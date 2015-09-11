@@ -72,6 +72,15 @@ describe FactoryMom do
     it 'reads reflections properly' do
       expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 4
     end
+    it 'supports hooks on inheritance' do
+      hooked = false
+      mom.hook do |model|
+        hooked = true
+      end
+      expect(hooked).to be false
+      class ARB < ActiveRecord::Base ; end
+      expect(hooked).to be true
+    end
   end
 
   context FactoryMom::DSL::Generators do
