@@ -75,9 +75,13 @@ describe FactoryMom do
   end
 
   context FactoryMom::DSL::Generators do
-    it 'generates default string' do
-      puts "STR: #{subject.string}"
+    it 'generates string properly' do
       expect(subject.string.length).to eq 16
+      expect(subject.string(length: 5).length).to eq 5
+      expect(subject.string(utf8: false)).to match /[a-z]+/
+      expect(subject.string(utf8: true)).to match /\p{Letter}+/
+      expect(subject.string(strip: true)).to match /\S.+\S/
+      expect(subject.string(strip: false)).to match /\s.+\s/
     end
   end
 
