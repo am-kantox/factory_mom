@@ -8,8 +8,14 @@ describe FactoryMom do
     before do
       class A ; end
       class B
+        @@inherited_counter ||= 0
+        def self.inherited_counter
+          @@inherited_counter
+        end
         def self.inherited subclass
-          puts '      Hi! I have inherited defined.'
+          lambda do
+            @@inherited_counter += 1
+          end.call
         end
       end
       class B0 < B ; end
@@ -26,7 +32,7 @@ describe FactoryMom do
       class B1 < B ; end
     end
 
-    it 'Diagnostics is able to hook classes' do
+    it 'hooks standard classes properly' do
       # ▶ mom
       #⇒ #<FactoryMom::Diagnostics:0x00000004095958
       #  @plugins=
@@ -43,16 +49,35 @@ describe FactoryMom do
         'Hi, I am B plugin'
       ])
     end
+    it 'handles both defined and undefined inherited callbacks' do
+      expect(B.inherited_counter).to eq 2
+    end
   end
 
   context FactoryMom::ActiveRecordBase do
     let(:mom) { FactoryMom::MODEL_VISOR }
 
-    it 'counts all models in the app' do
+    it 'hooks ActiveRecord::Base' do
       expect(mom.targets.keys).to match_array([ActiveRecord::Base.name.to_sym])
+    end
+    it 'reads indices properly' do
       expect(mom.indices.map(&:last).reduce(&:|).map(&:name)).to match_array(["index_posts_on_text"])
+    end
+    it 'reads foreign keys properly' do
       expect(mom.foreign_keys.map(&:last).reduce(&:|).map(&:name)).to match_array([]) # FIXME On MySQL there must be FKs
+      skip 'unless I have MySQL tests' do
+        pending 'test this on MySQL database to ensure proper functionality'
+      end
+    end
+    it 'reads reflections properly' do
       expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 4
+    end
+  end
+
+  context FactoryMom::DSL::Generators do
+    it 'generates default string' do
+      puts "STR: #{subject.string}"
+      expect(subject.string.length).to eq 16
     end
   end
 
