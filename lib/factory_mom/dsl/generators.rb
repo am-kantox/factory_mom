@@ -22,14 +22,32 @@ module FactoryMom
       #       duplicates. It left this way because nobosy is intended to call
       #       these methods outside of factories, where resetting base is not_to
       #       probable. Take care of this when calling it from everywhere else.
-      # @NoWarrantyDisclamer 
-      def counter owner: :orphans, length: 2, base: 10
+      # @NoWarrantyDisclamer
+      def generic_counter owner: :orphans, length: 2, base: 10
         @counters[owner] = (@counters[owner] || 0).next
         @counters[owner].to_s(base).upcase.rjust(length, '0').tap do |val|
-          raise MomFail.new self, "Generator Error: counter for «#{owner}» is out of bounds" if val.length != length
+          raise MomFail.new self, "Generator Error: #{caller.first[/(?<=`).*?(?=')/]} for «#{owner}» is out of bounds" if val.length != length
         end
       end
-      module_function :string, :counter
+
+      def counter owner: :orphans, length: 2, base: 10
+        generic_counter owner: owner, length: length, base: base
+      end
+
+      # @todo Make template not mandatory param if owner was already specified
+      def pattern owner: :orphans, template: '😎«3d»'
+        opening, length, base, closing = template.match(/\A(.*?)[\p{Ps}\p{Pi}](\d+)([dDhHaA]?)[\p{Pe}\p{Pf}](.*?)\z/).captures
+        base =  case base
+                when 'd', 'D' then 10
+                when 'h', 'H' then 16
+                when 'a', 'A' then 36
+                else 10
+                end
+        "#{opening}#{generic_counter owner: owner, length: (length || 2).to_i, base: base}#{closing}"
+      end
+
+      module_function :generic_counter
+      module_function :string, :counter, :pattern
     end
   end
 end

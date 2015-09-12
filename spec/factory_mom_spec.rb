@@ -91,6 +91,7 @@ describe FactoryMom do
       expect(subject.string(utf8: true)).to match /\p{Letter}+/
       expect(subject.string(strip: true)).to match /\S.+\S/
       expect(subject.string(strip: false)).to match /\s.+\s/
+      expect(puts "\t\t#{subject.string(utf8: true)}").to be_nil
     end
 
     it 'generates counter properly' do
@@ -103,6 +104,17 @@ describe FactoryMom do
       expect(subject.counter(owner: :hex, base: 16)).to eq '0A'
       expect { 99.times { subject.counter(owner: :overflow) } }.not_to raise_error
       expect { 100.times { subject.counter(owner: :overflow) } }.to raise_error(FactoryMom::MomFail)
+    end
+
+    it 'generates pattern properly' do
+      expect(subject.pattern(owner: :pattern).length).to eq 4
+      expect(subject.pattern(owner: :pattern)).to eq '😎002'
+      expect(puts "\t\t#{subject.pattern(owner: :pattern)}").to be_nil
+      expect(subject.pattern(template: 'Шаблон«5»').length).to eq 11
+      expect(subject.pattern(owner: :шаблон, template: 'Шаблон«3a»')).to eq 'Шаблон001'
+      # subsequent execution
+      35.times { subject.pattern(owner: :шаблон, template: 'Шаблон«3a»') }
+      expect(subject.pattern(owner: :шаблон, template: 'Шаблон«3a»')).to eq 'Шаблон011'
     end
   end
 
