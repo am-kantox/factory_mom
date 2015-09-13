@@ -14,13 +14,13 @@ ActiveRecord::Schema.define do
   create_table :users do |t|
     t.integer :id, null: false
     t.integer :parent_id
-    t.string  :type
-    t.string  :name
+    t.string  :type, null: false
+    t.string  :name, null: false
   end unless table_exists? :users
   create_table :posts do |t|
-    t.integer :id, :null => false
+    t.integer :id, null: false
     t.integer :user_id
-    t.string  :text
+    t.string  :text, null: false
   end unless table_exists? :posts
   add_index :posts, :text unless index_exists? :posts, :text
   # FIXME RAILS4 add_foreign_key :posts, :users, column: :user_id unless foreign_key_exists? :posts, column: :user_id
