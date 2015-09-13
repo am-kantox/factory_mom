@@ -5,6 +5,7 @@ require 'factory_mom/version'
 require 'factory_mom/mom_fail'
 require 'factory_mom/diagnostics'
 require 'factory_mom/active_record_base'
+require 'factory_mom/dsl/sandbox'
 require 'factory_mom/dsl/kindergarten'
 require 'factory_mom/dsl/generators'
 

@@ -1,5 +1,3 @@
-require 'factory_girl'
-
 module FactoryMom
   class Kindergarten
     @targets = {}
@@ -18,14 +16,24 @@ module FactoryMom
       # end
       defs = target.columns.inject([]) do |memo, c|
         memo << c.name
-      end.join("#{$/}  ")
+      end.join("#{$/}    ")
 
       code = <<EOC
-FactoryGirl.define do
-  #{defs}
+::FactoryGirl.define do
+  factory :#{name} do
+    #{defs}
+  end
 end
 EOC
+    end
 
+    def instantiate name
+      Sandbox.class_eval([
+        %q(require 'factory_girl'),
+        produce(name),
+        "object = ::FactoryGirl.create(:#{name})",
+        "binding.pry"
+      ].join $/)
     end
   end
 end

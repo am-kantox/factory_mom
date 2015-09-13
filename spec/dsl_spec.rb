@@ -10,9 +10,15 @@ describe FactoryMom do
       end
     end
 
+    let(:user_instance) do
+      FactoryMom.define do |kg|
+        kg.instantiate :user
+      end
+    end
+
     it 'might produce simple things' do
-      binding.pry
-      puts kindergartens[:common].inspect
+      puts kindergartens.inspect
+      puts user_instance.inspect
     end
   end
 end
