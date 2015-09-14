@@ -11,8 +11,9 @@ describe FactoryMom do
             text 'Hello world!'
           end
         end
-        # kg.produce :post
-        # kg.produce :user
+        kg.produce :post
+        kg.produce :user
+        kg.produce :admin
       end
     end
 

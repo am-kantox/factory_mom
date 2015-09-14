@@ -41,7 +41,7 @@ class User < ActiveRecord::Base
 end
 
 class Admin < User
-  has_many :user, :foreign_key => 'parent_id'
+  has_one :user, as: :parent, foreign_key: 'parent_id'
 end
 
 class Post < ActiveRecord::Base

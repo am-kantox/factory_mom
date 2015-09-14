@@ -85,13 +85,17 @@ EOC
             symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
             symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
             if symmetry.nil?
-              (memo[:association] ||= {})[name] = []
+              (memo[:association] ||= {})[r.options[:as] || r.name] = [name.to_class]
             else
-              (memo[:after] ||= {})[name] = [r.name, [symmetry.name, symmetry.macro == :has_many ? [:self] : :self]]
+              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class, symmetry.name, symmetry.collection? ? [:this] : :this]
             end
           when :has_many
             symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last[target.to_sym]
-            # (memo[:after] ||= {})[name] = []
+            if symmetry.nil?
+              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class]
+            else
+              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class, symmetry.name, symmetry.collection? ? [:this] : :this]
+            end
           end
         else
           raise MomFail.new self, "Kindergarten Error: unhandled reflection «#{r}». Consider to handle!"
