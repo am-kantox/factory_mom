@@ -61,7 +61,7 @@ describe FactoryMom do
       expect(mom.targets.keys).to match_array([ActiveRecord::Base.name.to_sym])
     end
     it 'reads indices properly' do
-      expect(mom.indices.map(&:last).reduce(&:|).map(&:name)).to match_array(["index_posts_on_text"])
+      expect(mom.indices.map(&:last).reduce(&:|).map(&:name)).to match_array(["index_posts_on_text", "index_comments_on_text"])
     end
     it 'reads foreign keys properly' do
       expect(mom.foreign_keys.map(&:last).reduce(&:|).map(&:name)).to match_array([]) # FIXME On MySQL there must be FKs
@@ -70,7 +70,9 @@ describe FactoryMom do
       end
     end
     it 'reads reflections properly' do
-      expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 4
+      expect(mom.reflections(:user).to_a.length).to eq 1
+      expect(mom.reflections(:user, :post).to_a.length).to eq 2
+      expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 7
     end
     it 'supports hooks on inheritance' do
       hooked = false
@@ -115,6 +117,12 @@ describe FactoryMom do
       # subsequent execution
       35.times { subject.pattern(owner: :шаблон, template: 'Шаблон«3a»') }
       expect(subject.pattern(owner: :шаблон, template: 'Шаблон«3a»')).to eq 'Шаблон011'
+    end
+
+    it 'might generate sequences basing on name and params' do
+      expect(subject.sequence(:string).call.length).to eq 16
+      expect(subject.sequence(:counter, owner: :sequence).call.length).to eq 2
+      expect(subject.sequence(:pattern, owner: :sequence).call.length).to eq 4
     end
   end
 

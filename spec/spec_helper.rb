@@ -22,9 +22,18 @@ ActiveRecord::Schema.define do
     t.integer :user_id
     t.string  :text, null: false
   end unless table_exists? :posts
+  create_table :comments do |t|
+    t.integer :id, null: false
+    t.integer :post_id
+    t.string :text, null: false
+  end unless table_exists? :comments
+
   add_index :posts, :text unless index_exists? :posts, :text
+  add_index :comments, :text unless index_exists? :comments, :text
+
   # FIXME RAILS4 add_foreign_key :posts, :users, column: :user_id unless foreign_key_exists? :posts, column: :user_id
   add_foreign_key :posts, :users, column: :user_id rescue nil
+  add_foreign_key :comments, :posts, column: :post_id rescue nil
 end
 
 class User < ActiveRecord::Base
@@ -37,10 +46,17 @@ end
 
 class Post < ActiveRecord::Base
   has_one :user
+  has_many :comments
+end
+
+class Comment < ActiveRecord::Base
+  has_one :post
+  has_one :user, through: :posts
 end
 
 User.delete_all
 Post.delete_all
+Comment.delete_all
 
 User.create({
   name: 'Aleksei'

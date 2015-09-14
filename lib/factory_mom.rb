@@ -11,7 +11,8 @@ require 'factory_mom/dsl/generators'
 
 module FactoryMom
   def define pool: :common
-    return enum_for(:define) unless block_given?
+    raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
+
     @kindergartens ||= {}
     @kindergartens[pool] ||= Kindergarten.new
     @kindergartens[pool].instance_eval do
@@ -21,6 +22,11 @@ module FactoryMom
   end
   module_function :define
 
+  class ::Object
+    def to_class
+      nil
+    end
+  end
   class ::String
     def to_class
       Kernel.const_defined?(self.camelize) && self.camelize.constantize ||
@@ -31,6 +37,17 @@ module FactoryMom
   class ::Symbol
     def to_class
       self.to_s.to_class
+    end
+    def pluralize
+      self.to_s.pluralize.to_sym
+    end
+  end
+  class ::Class
+    def to_class
+      self
+    end
+    def to_sym
+      self.name.gsub(/(?<=\w)([A-Z])/, '_\1').downcase.to_sym
     end
   end
 end

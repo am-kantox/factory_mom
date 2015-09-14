@@ -46,8 +46,19 @@ module FactoryMom
         "#{opening}#{generic_counter owner: owner, length: (length || 2).to_i, base: base}#{closing}"
       end
 
+      def loremipsum
+        string length: 255
+      end
+
       module_function :generic_counter
-      module_function :string, :counter, :pattern
+      module_function :string, :loremipsum, :counter, :pattern
+
+      def sequence type, **params
+        lambda do
+          FactoryMom::DSL::Generators.public_send type, **params
+        end
+      end
+      module_function :sequence
     end
   end
 end

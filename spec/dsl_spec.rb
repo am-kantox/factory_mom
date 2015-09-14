@@ -6,7 +6,13 @@ describe FactoryMom do
 
     let(:kindergartens) do
       FactoryMom.define do |kg|
-        kg.produce :user
+        kg.produce :comment do
+          trait :short do
+            text 'Hello world!'
+          end
+        end
+        # kg.produce :post
+        # kg.produce :user
       end
     end
 
@@ -18,7 +24,7 @@ describe FactoryMom do
 
     it 'might produce simple things' do
       puts kindergartens.inspect
-      puts user_instance.inspect
+      # puts user_instance.inspect
     end
   end
 end
