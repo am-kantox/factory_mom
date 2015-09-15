@@ -12,7 +12,7 @@ describe FactoryMom do
           suppress :title
         end
         produce :comment, aliases: [:комментарий]  do
-          trait :arg1, :arg2, hash: :hash  do
+          trait :arg1 do
             puts 'Hello world!'
           end
         end
@@ -21,7 +21,7 @@ describe FactoryMom do
 
     let(:user_instance) do
       FactoryMom.define do
-        instantiate :user
+        instantiate :comment
       end
     end
 
@@ -43,7 +43,7 @@ describe FactoryMom do
 			shallow false
 		end
 		# delegated to factory
-		trait :arg1, :arg2, hash: :hash  do
+		trait :arg1 do
 			puts 'Hello world!'
 		end
 		# associations
@@ -73,6 +73,9 @@ end
 	end
 end
 }
+    end
+    it 'might create instances' do
+      expect(user_instance.class).to be Comment
     end
   end
 end

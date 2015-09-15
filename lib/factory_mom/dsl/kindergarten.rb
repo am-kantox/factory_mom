@@ -130,6 +130,15 @@ end
 EOC
     end
 
+    def instantiate name, **params
+      to_be_evaled = [
+        %q(require 'factory_girl'),
+        code(name, **params),
+        "object = ::FactoryGirl.create(:#{name})",
+        "binding.pry"
+      ].join $/
+      Sandbox.class_eval(to_be_evaled)
+    end
 
   protected
     # We will delegate to underlying FactoryGirl instance every not known trait
@@ -143,16 +152,6 @@ EOC
       name = /#{name}/ unless name.is_a? Regexp
       (@suppressed[@current] ||= []) << name
     end
-
-    def instantiate name
-      Sandbox.class_eval([
-        %q(require 'factory_girl'),
-        code(name),
-        "object = ::FactoryGirl.create(:#{name})",
-        "# binding.pry"
-      ].join $/)
-    end
-
 
   private
     def reflections target
