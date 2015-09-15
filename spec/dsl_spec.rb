@@ -11,7 +11,7 @@ describe FactoryMom do
         produce :post
         produce :comment do
           trait :short do
-            text 'Hello world!'
+            puts 'Hello world!'
           end
         end
       end

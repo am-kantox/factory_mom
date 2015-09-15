@@ -2,6 +2,14 @@ module FactoryMom
   class Kindergarten
     def initialize
       @targets = {}
+      @mx = Mutex.new
+      @current = nil
+    end
+
+    # We will delegate to underlying FactoryGirl instance every not known trait
+    def method_missing name, *args
+      raise MomFail.new self, "DSL Error: inconsistent call to `#{name}'" unless @targets[@current][:delegates].is_a? Array
+      @targets[@current][:delegates] << (block_given? ? [name, args, Proc.new] : [name, args])
     end
 
     # Produces a skeleton for factory definition.
@@ -12,28 +20,55 @@ module FactoryMom
     #        id: { generator: :autoinc },
     #        name: { generator: [:pattern, {template: 'CAIX«2h»'}] }
     #     }
+    #
     def produce name
-      target =  name.to_class
+      target = name.to_class
+      raise MomFail.new self, "FactoryMom Error: producers can not be nested #{name}"  unless @current.nil?
 
-      raise MomFail.new self, "DSL Error in `#{__callee__}': unknown entity to produce (#{name})" if target.nil?
-      raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «columns»" unless target.respond_to?(:columns)
+      @mx.synchronize do
+        raise MomFail.new self, "DSL Error in `#{__callee__}': unknown entity to produce (#{name})" if target.nil?
+        raise MomFail.new self, "FactoryMom Error: refactoring objects in prohibited (#{name})"  unless @targets[target].nil?
+        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «reflections»" unless target.respond_to?(:reflections)
+        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «columns»" unless target.respond_to?(:columns)
 
-      puts target.to_s.rjust 40, '='
-      puts reflections(target).inspect
+        @targets[@current = target] = { delegates: [], columns: {}, handled: {} }
 
-      @targets[target] ||= target.columns.map do |c|
-        # @name="id", @sql_type="INTEGER", @null=false, @limit=nil, @precision=nil, @scale=nil, @type=:integer, @default=nil, @primary=true, @coder=nil
-        # @name="type", @sql_type="varchar(255)", @null=true, @limit=255, @precision=nil, @scale=nil, @type=:string, @default=nil, @primary=false, @coder=nil
-        description = {}
-        description[:generator] = case c.sql_type
-                                  when 'INTEGER' then :autoinc
-                                  when 'integer' then :counter
-                                  when /\Avarchar\((\d{1,2})\)/ then :string
-                                  when /\Avarchar\((\d{3,})\)/ then :loremipsum
-                                  end
-        description[:nullable] = c.null
-        [c.name.to_sym, description]
-      end.to_h
+        # start with reflections
+        @targets[@current][:reflections] = reflections(@current)
+
+        # stack all traits to be delegated
+        instance_eval(&Proc.new) if block_given?
+
+        # reflection names and traits delegated to underlying `FactoryGirl`
+        handled = @targets[@current][:reflections].values.map { |kv| kv.is_a?(Hash) && kv.first.first || nil }.compact | @targets[@current][:delegates].map(&:first)
+
+        # proceed with columns left (not handled by reflections and delegates)
+         @current.columns.inject(@targets[@current]) do |memo, c|
+          if handled.any? { |h| /#{h}(?:_id)?/ =~ c.name.to_s }
+            memo[:handled][c.name.to_sym] = c
+          else
+            # @name="id", @sql_type="INTEGER", @null=false, @limit=nil, @precision=nil, @scale=nil, @type=:integer, @default=nil, @primary=true, @coder=nil
+            # @name="type", @sql_type="varchar(255)", @null=true, @limit=255, @precision=nil, @scale=nil, @type=:string, @default=nil, @primary=false, @coder=nil
+            memo[:columns][c.name.to_sym] = {
+              column: c,
+              generator:  case c.sql_type
+                          when 'INTEGER' then :autoinc
+                          when 'integer' then :counter
+                          when /\Avarchar\((\d+)\)/ then c.limit < 16 ? :string : :loremipsum
+                          end,
+              nullable: c.null
+            }
+          end
+          memo
+        end
+
+        # binding.pry if @current == Comment
+        @current = nil
+      end
+    end
+
+    # trait to suppress creating of fields with exotic names, containing indeed foreign keys
+    def suppress name
     end
 
     # FactoryGirl.define do
