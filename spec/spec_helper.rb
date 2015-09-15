@@ -11,21 +11,29 @@ ActiveRecord::Base.establish_connection({
 Foreigner.load
 
 ActiveRecord::Schema.define do
+  if ENV['RECREATE_TABLES']
+    drop_table :comments if table_exists? :comments
+    drop_table :posts if table_exists? :posts
+    drop_table :users if table_exists? :users
+  end
+
   create_table :users do |t|
     t.integer :id, null: false
     t.integer :parent_id
-    t.string  :type, null: false
+    t.string  :type
     t.string  :name, null: false
   end unless table_exists? :users
   create_table :posts do |t|
     t.integer :id, null: false
-    t.integer :user_id
+    t.integer :user_id, null: false
+    t.string  :title
     t.string  :text, null: false
   end unless table_exists? :posts
   create_table :comments do |t|
     t.integer :id, null: false
-    t.integer :post_id
-    t.string :text, null: false
+    t.integer :author_id, null: false
+    t.integer :post_id, null: false
+    t.string  :text
   end unless table_exists? :comments
 
   add_index :posts, :text unless index_exists? :posts, :text
@@ -33,6 +41,7 @@ ActiveRecord::Schema.define do
 
   # FIXME RAILS4 add_foreign_key :posts, :users, column: :user_id unless foreign_key_exists? :posts, column: :user_id
   add_foreign_key :posts, :users, column: :user_id rescue nil
+  add_foreign_key :comments, :users, column: :author_id rescue nil
   add_foreign_key :comments, :posts, column: :post_id rescue nil
 end
 
@@ -40,7 +49,7 @@ class User < ActiveRecord::Base
   has_many :posts
 end
 
-class Admin < User
+class Writer < User
   has_one :user, as: :parent, foreign_key: 'parent_id'
 end
 
@@ -51,20 +60,29 @@ end
 
 class Comment < ActiveRecord::Base
   has_one :post
-  has_one :user, through: :posts
+  has_one :writer, as: :author, class_name: :writer
+  has_one :user, as: :owner, through: :posts
 end
 
-User.delete_all
-Post.delete_all
 Comment.delete_all
+Post.delete_all
+User.delete_all
 
 User.create({
-  name: 'Aleksei'
-})
-Admin.create({
   name: 'Carles'
 })
+Writer.create({
+  name: 'Aleksei',
+  parent_id: User.find_by_name('Carles').id
+})
 Post.create({
-  user_id: User.find_by_name('Aleksei'),
+  user_id: User.find_by_name('Carles').id,
+  title: 'Post #1',
   text: 'Lorem ipsum'
 })
+Comment.create({
+  author_id: User.find_by_name('Aleksei').id,
+  post_id: Post.find_by_title('Post #1').id,
+  text: 'Lorem commentum'
+})
+# binding.pry

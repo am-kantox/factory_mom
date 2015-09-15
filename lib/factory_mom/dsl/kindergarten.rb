@@ -75,27 +75,28 @@ EOC
       reflections = FactoryMom::MODEL_VISOR.reflections(target).first.last
 
       reflections.inject({}) do |memo, (name, r)|
+        if r.active_record != target
+          memo[:parent] = r.active_record.to_sym
+          next memo
+        end
+
         case r
         when ActiveRecord::Reflection::ThroughReflection
           # (memo[:association] ||= {})[name] = [r.options[:through]]
           # (memo[:after] ||= {})[name] = nil
         when ActiveRecord::Reflection::AssociationReflection
-          case r.macro
-          when :has_one
-            symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
-            symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
-            if symmetry.nil?
-              (memo[:association] ||= {})[r.options[:as] || r.name] = [name.to_class]
-            else
-              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class, symmetry.name, symmetry.collection? ? [:this] : :this]
-            end
-          when :has_many
-            symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last[target.to_sym]
-            if symmetry.nil?
-              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class]
-            else
-              (memo[:after] ||= {})[r.options[:as] || r.name] = [name.to_class, symmetry.name, symmetry.collection? ? [:this] : :this]
-            end
+          symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
+          symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
+          key = case r.macro
+                when :has_one then [:association, :after]
+                when :has_many then [:after, :after]
+                end
+          instantiatable = r.options[:class_name] || r.name.singularize
+          if symmetry.nil?
+            (memo[key.first] ||= {})[r.options[:as] || r.name] = [instantiatable]
+          else
+            symmetry_instantiatable = symmetry.options[:class_name] || symmetry.name.singularize
+            (memo[key.last] ||= {})[r.options[:as] || r.name] = [instantiatable, symmetry_instantiatable, symmetry.collection? ? [:this] : :this]
           end
         else
           raise MomFail.new self, "Kindergarten Error: unhandled reflection «#{r}». Consider to handle!"

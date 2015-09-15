@@ -7,7 +7,7 @@ module FactoryMom
       def string length: 16, spaces: true, strip: true, utf8: true
         samples = (utf8 ? ('א'..'ת') : ('a'..'z')).to_a
         λ = lambda do |samples, i| samples.sample end
-          # content
+
         begin
           content = length.times.map(&λ.curry[samples]).join
           content[(2..length - 2).to_a.sample] = ' ' if spaces && length > 3

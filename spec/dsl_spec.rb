@@ -5,15 +5,15 @@ describe FactoryMom do
     let(:mom) { FactoryMom::MODEL_VISOR }
 
     let(:kindergartens) do
-      FactoryMom.define do |kg|
-        kg.produce :comment do
+      FactoryMom.define do
+        produce :user
+        produce :writer
+        produce :post
+        produce :comment do
           trait :short do
             text 'Hello world!'
           end
         end
-        kg.produce :post
-        kg.produce :user
-        kg.produce :admin
       end
     end
 
