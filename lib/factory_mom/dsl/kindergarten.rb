@@ -125,8 +125,7 @@ EOC
 
         case r
         when ActiveRecord::Reflection::ThroughReflection
-          # (memo[:association] ||= {})[name] = [r.options[:through]]
-          # (memo[:after] ||= {})[name] = nil
+          (memo[:through] ||= {})[r.options[:as] || r.name] = [r.options[:class_name] || r.name.singularize, r.options[:through].singularize, r.collection? ? [:this] : :this]
         when ActiveRecord::Reflection::AssociationReflection
           symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
           symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]

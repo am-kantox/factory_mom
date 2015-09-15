@@ -42,6 +42,7 @@ describe FactoryMom do
       expect(kindergartens.values.last[:delegates].first.last.class).to be Proc
 
       expect(FactoryMom.mushrooms.length).to eq 4
+      # binding.pry
     end
   end
 end
