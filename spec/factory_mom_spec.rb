@@ -1,6 +1,14 @@
 require 'spec_helper'
 
 describe FactoryMom do
+  context ::Hash do
+    let(:hash) { { a: 5, "b" => Hash, Integer => [5, 6, 7], other: { h1: 5, h2: nil } } }
+    it "Hash::to_double_splat works as expected" do
+      expect(hash.to_double_splat).to eq (%q{a: 5, "b" => Hash, Integer => [5, 6, 7], other: { h1: 5, h2: nil }})
+      expect({}.to_double_splat).to eq ('')
+    end
+  end
+
   context FactoryMom::Diagnostics do
     let(:mom) { FactoryMom::VISOR }
     let(:stdout) { [] }

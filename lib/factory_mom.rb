@@ -31,13 +31,23 @@ module FactoryMom
     def mushrooms pool: :common
       @kindergartens ||= {}
 
-      kindergartens[pool].targets
+      kindergartens[pool] && kindergartens[pool].targets
     end
   end
 
   class ::Object
     def to_class
       nil
+    end
+  end
+  class ::Hash
+    def to_double_splat
+      map do |k, v|
+        case k
+        when Symbol then "#{k}: "
+        else "#{k.inspect} => "
+        end << (Hash === v ? "{ #{v.to_double_splat} }" : v.inspect)
+      end.join ', '
     end
   end
   class ::String

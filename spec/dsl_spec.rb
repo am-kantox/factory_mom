@@ -11,8 +11,8 @@ describe FactoryMom do
         produce :post do
           suppress :title
         end
-        produce :comment do
-          trait :short do
+        produce :comment, aliases: [:комментарий]  do
+          trait :arg1, :arg2, hash: :hash  do
             puts 'Hello world!'
           end
         end
@@ -42,7 +42,26 @@ describe FactoryMom do
       expect(kindergartens.values.last[:delegates].first.last.class).to be Proc
 
       expect(FactoryMom.mushrooms.length).to eq 4
-      # binding.pry
+    end
+
+    it 'might produce code' do
+      expect(FactoryMom.kindergartens[:common].code :comments, aliases: [:комментарий]).to eq %q{::FactoryGirl.define do
+	factory :comments, aliases: [:комментарий] do
+		transient do
+			shallow false
+		end
+		# delegated to factory
+		trait :arg1, :arg2, hash: :hash  do
+			puts 'Hello world!'
+		end
+		# associations
+		author :writer
+		# raw columns
+		text { FactoryMom::DSL::Generators.loremipsum }
+# FIXME AFTER THROUGH
+	end
+end
+}
     end
   end
 end

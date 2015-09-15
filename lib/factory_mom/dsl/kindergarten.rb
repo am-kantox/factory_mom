@@ -18,9 +18,10 @@ module FactoryMom
     #        name: { generator: [:pattern, {template: 'CAIX«2h»'}] }
     #     }
     #
-    def produce name
+    def produce name, cache: false, **params
       target = name.to_class
       raise MomFail.new self, "FactoryMom Error: producers can not be nested #{name}"  unless @current.nil?
+      return @targets[target] if cache && @targets[target]
 
       @mx.synchronize do
         raise MomFail.new self, "DSL Error in `#{__callee__}': unknown entity to produce (#{name})" if target.nil?
@@ -28,7 +29,7 @@ module FactoryMom
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «reflections»" unless target.respond_to?(:reflections)
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «columns»" unless target.respond_to?(:columns)
 
-        @targets[@current = target] = { delegates: [], columns: {}, handled: {}, suppressed: {} }
+        @targets[@current = target] = { delegates: [], columns: {}, handled: {}, suppressed: {}, params: params }
 
         # start with reflections
         @targets[@current][:reflections] = reflections(@current)
@@ -66,6 +67,53 @@ module FactoryMom
       end
     end
 
+    def code name, **params
+      target = produce name, **params, cache: true
+ #      { :delegates=> [[:trait, [:short], #<Proc:0x0000000260c5c8@/home/am/Proyectos/Kantox/factory_mom/spec/dsl_spec.rb:15>]],
+ #        :columns=>
+ #          {:id=> {:column=>..., :generator=>:autoinc, :nullable=>false},
+ #           :text=> {:column=>..., :generator=>:loremipsum, :nullable=>true}},
+ #        :handled=> {:author_id=>..., :post_id=>...},
+ #        :suppressed=> {},
+ #        :params=> {:aliases=> [:комментарий]},
+ #        :reflections=>
+ #          {:after=> {:post=> [:post, :comment, [:this]]},
+ #           :associations=> {:author=> [:writer]},
+ #           :through=> {:owner=> [:user, :post, :this]}}}
+      factory_params = target[:params].to_double_splat
+      factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
+
+      associations = target[:reflections][:associations].map do |k, v|
+        "\t\t#{k} " << v.map(&:inspect).join(', ')
+      end.join $/
+      associations = associations.empty? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
+
+      columns = target[:columns].reject do |_, v|
+        v[:generator] == :autoinc
+      end.map do |k, v| # FIXME add length for strings
+        "\t\t#{k} { FactoryMom::DSL::Generators.#{v[:generator]} }"
+      end.join $/
+      columns = columns.empty? ? "\t\t# this object has no raw columns" : "\t\t# raw columns#{$/}#{columns}"
+
+      delegates = target[:delegates].map { |el| "#{el.last.source.rstrip.gsub(/ {4}/, %Q{\t}).gsub(/(?<=\t) {2}/, '')}" }.join $/
+      delegates = delegates.empty? ? "\t\t# this object has no delegates" : "\t\t# delegated to factory#{$/}#{delegates}"
+
+      code = <<EOC
+::FactoryGirl.define do
+\tfactory :#{factory_title} do
+\t\ttransient do
+\t\t\tshallow false
+\t\tend
+#{delegates}
+#{associations}
+#{columns}
+# FIXME AFTER THROUGH
+\tend
+end
+EOC
+    end
+
+
   protected
     # We will delegate to underlying FactoryGirl instance every not known trait
     def method_missing name, *args
@@ -77,30 +125,6 @@ module FactoryMom
     def suppress name
       name = /#{name}/ unless name.is_a? Regexp
       (@suppressed[@current] ||= []) << name
-    end
-
-    # FactoryGirl.define do
-    #   factory :user do
-    #     name 'Aleksei'
-    #   end
-    # end
-    def code name
-      defs = (produce name).inject([]) do |memo, (name, description)|
-        next memo if description[:generator] == :autoinc
-        memo << name
-      end.join("#{$/}    ")
-
-      # FIXME Change `ignore` to `transient` as the former is obsolete
-      code = <<EOC
-::FactoryGirl.define do
-  factory :#{name} do
-    transient do
-      shallow false
-    end
-    #{defs}
-  end
-end
-EOC
     end
 
     def instantiate name
@@ -130,7 +154,7 @@ EOC
           symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
           symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
           key = case r.macro
-                when :has_one then [:association, :after]
+          when :has_one then [:associations, :after]
                 when :has_many then [:after, :after]
                 end
           instantiatable = r.options[:class_name] || r.name.singularize
