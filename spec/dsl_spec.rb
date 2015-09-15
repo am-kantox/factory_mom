@@ -62,6 +62,20 @@ describe FactoryMom do
 	end
 end
 }
+      expect(FactoryMom.kindergartens[:common].code :writer).to eq %q{::FactoryGirl.define do
+	factory :writer, parent: :user do
+		transient do
+			shallow false
+		end
+		# this object has no delegates
+		# associations
+		parent :user
+		# raw columns
+		name { FactoryMom::DSL::Generators.loremipsum }
+# FIXME AFTER THROUGH
+	end
+end
+}
     end
   end
 end

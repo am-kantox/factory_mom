@@ -42,8 +42,10 @@ module FactoryMom
 
         # proceed with columns left (not handled by reflections and delegates)
          @current.columns.inject(@targets[@current]) do |memo, c|
-          if handled.any? { |h| /#{h}(?:_id)?/ =~ c.name.to_s }
+          if handled.any? { |h| /#{h}(?:_id)?/ =~ c.name.to_s } # reference / fk
             memo[:handled][c.name.to_sym] = c
+          elsif c.name.to_s == 'type'                           # rails type field
+            memo[:suppressed][c.name.to_sym] = c
           elsif @suppressed[@current].is_a?(Array) && @suppressed[@current].any? { |s| s =~ c.name.to_s }
             memo[:suppressed][c.name.to_sym] = c
           else
@@ -80,7 +82,7 @@ module FactoryMom
  #          {:after=> {:post=> [:post, :comment, [:this]]},
  #           :associations=> {:author=> [:writer]},
  #           :through=> {:owner=> [:user, :post, :this]}}}
-      factory_params = target[:params].to_double_splat
+      factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent] } : {}).to_double_splat
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
