@@ -10,21 +10,30 @@ require 'factory_mom/dsl/kindergarten'
 require 'factory_mom/dsl/generators'
 
 module FactoryMom
-  def define pool: :common, yielding: false
-    raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
+  class << self
+    attr_reader :kindergartens
 
-    @kindergartens ||= {}
-    @kindergartens[pool] ||= Kindergarten.new
-    if yielding
-      @kindergartens[pool].instance_eval do
-        yield self
+    def define pool: :common, yielding: false
+      raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
+      @kindergartens ||= {}
+
+      kindergartens[pool] ||= Kindergarten.new
+      if yielding
+        kindergartens[pool].instance_eval do
+          yield self
+        end
+      else
+        kindergartens[pool].instance_eval &Proc.new
       end
-    else
-      @kindergartens[pool].instance_eval &Proc.new
+      mushrooms pool: pool
     end
-    @kindergartens
+
+    def mushrooms pool: :common
+      @kindergartens ||= {}
+
+      kindergartens[pool].targets
+    end
   end
-  module_function :define
 
   class ::Object
     def to_class

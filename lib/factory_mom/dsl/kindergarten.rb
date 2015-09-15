@@ -1,15 +1,12 @@
 module FactoryMom
   class Kindergarten
+    attr_reader :targets
+
     def initialize
       @targets = {}
+      @suppressed = {}
       @mx = Mutex.new
       @current = nil
-    end
-
-    # We will delegate to underlying FactoryGirl instance every not known trait
-    def method_missing name, *args
-      raise MomFail.new self, "DSL Error: inconsistent call to `#{name}'" unless @targets[@current][:delegates].is_a? Array
-      @targets[@current][:delegates] << (block_given? ? [name, args, Proc.new] : [name, args])
     end
 
     # Produces a skeleton for factory definition.
@@ -31,7 +28,7 @@ module FactoryMom
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «reflections»" unless target.respond_to?(:reflections)
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «columns»" unless target.respond_to?(:columns)
 
-        @targets[@current = target] = { delegates: [], columns: {}, handled: {} }
+        @targets[@current = target] = { delegates: [], columns: {}, handled: {}, suppressed: {} }
 
         # start with reflections
         @targets[@current][:reflections] = reflections(@current)
@@ -46,6 +43,8 @@ module FactoryMom
          @current.columns.inject(@targets[@current]) do |memo, c|
           if handled.any? { |h| /#{h}(?:_id)?/ =~ c.name.to_s }
             memo[:handled][c.name.to_sym] = c
+          elsif @suppressed[@current].is_a?(Array) && @suppressed[@current].any? { |s| s =~ c.name.to_s }
+            memo[:suppressed][c.name.to_sym] = c
           else
             # @name="id", @sql_type="INTEGER", @null=false, @limit=nil, @precision=nil, @scale=nil, @type=:integer, @default=nil, @primary=true, @coder=nil
             # @name="type", @sql_type="varchar(255)", @null=true, @limit=255, @precision=nil, @scale=nil, @type=:string, @default=nil, @primary=false, @coder=nil
@@ -62,13 +61,22 @@ module FactoryMom
           memo
         end
 
-        # binding.pry if @current == Comment
-        @current = nil
+        # binding.pry if @current == Post #Comment
+        @targets[@current].tap { @current = nil }
       end
+    end
+
+  protected
+    # We will delegate to underlying FactoryGirl instance every not known trait
+    def method_missing name, *args
+      raise MomFail.new self, "DSL Error: inconsistent call to `#{name}'" unless @targets[@current][:delegates].is_a? Array
+      @targets[@current][:delegates] << (block_given? ? [name, args, Proc.new] : [name, args])
     end
 
     # trait to suppress creating of fields with exotic names, containing indeed foreign keys
     def suppress name
+      name = /#{name}/ unless name.is_a? Regexp
+      (@suppressed[@current] ||= []) << name
     end
 
     # FactoryGirl.define do
