@@ -72,7 +72,7 @@ User.create({
   name: 'Carles'
 })
 Writer.create({
-  name: 'Aleksei',
+  name: 'Ulises',
   parent_id: User.find_by_name('Carles').id
 })
 Post.create({
@@ -81,7 +81,7 @@ Post.create({
   text: 'Lorem ipsum'
 })
 Comment.create({
-  author_id: User.find_by_name('Aleksei').id,
+  author_id: User.find_by_name('Ulises').id,
   post_id: Post.find_by_title('Post #1').id,
   text: 'Lorem commentum'
 })
