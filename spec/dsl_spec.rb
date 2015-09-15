@@ -29,14 +29,6 @@ describe FactoryMom do
       expect(kindergartens.class).to be Hash
       expect(kindergartens.length).to eq 4
       expect(kindergartens.keys).to match_array [User, Writer, Post, Comment]
-      # { :delegates=>[[:trait, [:short], #<Proc:0x0000000223d3e8@/home/am/Proyectos/Kantox/factory_mom/spec/dsl_spec.rb:15>]],
-      #   :columns=>{:id=>{:column=>..., :generator=>:autoinc, :nullable=>false},
-      #              :text=>{:column=>..., :generator=>:loremipsum, :nullable=>true}
-      #   },
-      #   :handled=>{:author_id=>..., :post_id=>...},
-      #   :suppressed=>{},
-      #   :reflections=>{:after=>{:post=>[:post, :comment, [:this]]}, :association=>{:author=>[:writer]}}
-      # }
       expect(kindergartens.values.last.class).to be Hash
       expect(kindergartens.values.last[:delegates].first.first).to eq :trait
       expect(kindergartens.values.last[:delegates].first.last.class).to be Proc
@@ -55,10 +47,14 @@ describe FactoryMom do
 			puts 'Hello world!'
 		end
 		# associations
-		author :writer
+		association :author, factory: :writer, strategy: :create
 		# raw columns
 		text { FactoryMom::DSL::Generators.loremipsum }
-# FIXME AFTER THROUGH
+		# after hook
+		after(:create, :build, :stub) do |this|
+			this.post = create :post, comments: [this]
+		end
+# FIXME THROUGH
 	end
 end
 }
@@ -69,10 +65,11 @@ end
 		end
 		# this object has no delegates
 		# associations
-		parent :user
+		association :parent, factory: :user, strategy: :create
 		# raw columns
 		name { FactoryMom::DSL::Generators.loremipsum }
-# FIXME AFTER THROUGH
+		# this object does not use after hook
+# FIXME THROUGH
 	end
 end
 }

@@ -79,14 +79,14 @@ module FactoryMom
  #        :suppressed=> {},
  #        :params=> {:aliases=> [:комментарий]},
  #        :reflections=>
- #          {:after=> {:post=> [:post, :comment, [:this]]},
+ #          {:after=> {:post=> [:post, :comments, [:this]]},
  #           :associations=> {:author=> [:writer]},
  #           :through=> {:owner=> [:user, :post, :this]}}}
       factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent] } : {}).to_double_splat
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
-        "\t\t#{k} " << v.map(&:inspect).join(', ')
+        "\t\tassociation :#{k}, factory: :#{v.first}, strategy: :create"
       end.join $/
       associations = associations.empty? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
 
@@ -100,6 +100,20 @@ module FactoryMom
       delegates = target[:delegates].map { |el| "#{el.last.source.rstrip.gsub(/ {4}/, %Q{\t}).gsub(/(?<=\t) {2}/, '')}" }.join $/
       delegates = delegates.empty? ? "\t\t# this object has no delegates" : "\t\t# delegated to factory#{$/}#{delegates}"
 
+      #after(:create, :build, :stub) do |this|
+      #  this.post = create :post, comments: [this]
+      #end
+
+      after = []
+      target[:reflections][:after] && target[:reflections][:after].inject(after) do |memo, (k, v)|
+        memo << if v.length > 1
+                  "this.#{k} = create :#{v.first}, #{v[1]}: [#{v.last.first}]"
+                else
+                  "this.#{k} = [ create :#{v.first} ]"
+                end
+      end
+      after = after.empty? ? "\t\t# this object does not use after hook" : "\t\t# after hook#{$/}\t\tafter(:create, :build, :stub) do |this|#{$/}\t\t\t#{after.join(%Q{$/\t\t\t})}#{$/}\t\tend"
+
       code = <<EOC
 ::FactoryGirl.define do
 \tfactory :#{factory_title} do
@@ -109,7 +123,8 @@ module FactoryMom
 #{delegates}
 #{associations}
 #{columns}
-# FIXME AFTER THROUGH
+#{after}
+# FIXME THROUGH
 \tend
 end
 EOC
@@ -156,14 +171,14 @@ EOC
           symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
           symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
           key = case r.macro
-          when :has_one then [:associations, :after]
+                when :has_one then [:associations, :after]
                 when :has_many then [:after, :after]
                 end
           instantiatable = r.options[:class_name] || r.name.singularize
           if symmetry.nil?
             (memo[key.first] ||= {})[r.options[:as] || r.name] = [instantiatable]
           else
-            symmetry_instantiatable = symmetry.options[:class_name] || symmetry.name.singularize
+            symmetry_instantiatable = symmetry.options[:class_name] || symmetry.name
             (memo[key.last] ||= {})[r.options[:as] || r.name] = [instantiatable, symmetry_instantiatable, symmetry.collection? ? [:this] : :this]
           end
         else
