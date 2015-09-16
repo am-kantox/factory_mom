@@ -31,7 +31,7 @@ ActiveRecord::Schema.define do
   end unless table_exists? :posts
   create_table :comments do |t|
     t.integer :id, null: false
-    t.integer :author_id, null: false
+    t.integer :author_id #, null: false
     t.integer :post_id, null: false
     t.string  :text
   end unless table_exists? :comments
@@ -50,7 +50,8 @@ class User < ActiveRecord::Base
 end
 
 class Writer < User
-  has_one :user, as: :parent, foreign_key: 'parent_id'
+  # FIXME FIXME FIXME SYNTAX AND IMPLEMENTATION
+  # has_one :parent, class_name: :user, foreign_key: 'parent_id'
 end
 
 class Post < ActiveRecord::Base
@@ -60,7 +61,8 @@ end
 
 class Comment < ActiveRecord::Base
   has_one :post
-  has_one :writer, as: :author, class_name: :writer
+  # FIXME FIXME FIXME SYNTAX AND IMPLEMENTATION
+  # has_one :writer, as: :author, class_name: :writer
   has_one :user, as: :owner, through: :posts
 end
 

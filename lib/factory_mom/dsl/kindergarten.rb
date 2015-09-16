@@ -1,7 +1,9 @@
 module FactoryMom
   class Kindergarten
+    # attribute reader for targets
     attr_reader :targets
 
+    # constructor, preparing targets and suppressed hashes
     def initialize
       @targets = {}
       @suppressed = {}
@@ -10,24 +12,48 @@ module FactoryMom
     end
 
     # Produces a skeleton for factory definition.
-    # As soon as target is already defined, does nothing; it is safe
+    # As soon as target is already defined, refactors it (when `refactor` param
+    #   is set to `true` or throws an `Execption` otherwise); it is safe
     #   to call this method whereever.
+    # Claimed to be thread-safe.
     # The resuting structure of `@targets[target]` is supposed to be like:
-    #     {
-    #        id: { generator: :autoinc },
-    #        name: { generator: [:pattern, {template: 'CAIX«2h»'}] }
-    #     }
     #
-    def produce name, cache: false, **params
+    #     {
+    #       :delegates=>[],
+    #       :columns=>{
+    #         :id=>{
+    #           :column=>#<ActiveRecord::ConnectionAdapters::SQLiteColumn...>,
+    #           :generator=>:autoinc,
+    #           :nullable=>false},
+    #         :parent_id=>{
+    #           :column=>#<ActiveRecord::ConnectionAdapters::SQLiteColumn...>,
+    #           :generator=>:counter,
+    #           :nullable=>true},
+    #         :name=>{
+    #           :column=>#<ActiveRecord::ConnectionAdapters::SQLiteColumn...>,
+    #           :generator=>:loremipsum,
+    #           :nullable=>false}},
+    #       :handled=>{},
+    #       :suppressed=>{
+    #         :type=>#<ActiveRecord::ConnectionAdapters::SQLiteColumn...>},
+    #       :params=>{},
+    #       :reflections=>{
+    #         :after=>{:posts=>[:post, :user, :this]}}}
+    # @param [String|Symbol|Class] name the name of class to produce
+    # @param [TrueClass|FalseClass] cache use caching or recreate?
+    # @param [TrueClass|FalseClass] refactor do refactor existing factory or throw an exception?
+    # @param [Hash] params the additional parameters to be passed directly to `FactoryGirl`
+    #
+    def produce name, cache: false, refactor: true, **params
       target = name.to_class
       raise MomFail.new self, "FactoryMom Error: producers can not be nested #{name}"  unless @current.nil?
       return @targets[target] if cache && @targets[target]
 
       @mx.synchronize do
         raise MomFail.new self, "DSL Error in `#{__callee__}': unknown entity to produce (#{name})" if target.nil?
-        raise MomFail.new self, "FactoryMom Error: refactoring objects in prohibited (#{name})"  unless @targets[target].nil?
-        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «reflections»" unless target.respond_to?(:reflections)
-        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{name}) does not respond to «columns»" unless target.respond_to?(:columns)
+        raise MomFail.new self, "FactoryMom Error: refactoring objects in prohibited (:#{target})"  unless refactor || @targets[target].nil?
+        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{target}) does not respond to «reflections»" unless target.respond_to?(:reflections)
+        raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{target}) does not respond to «columns»" unless target.respond_to?(:columns)
 
         @targets[@current = target] = { delegates: [], columns: {}, handled: {}, suppressed: {}, params: params }
 
@@ -44,6 +70,8 @@ module FactoryMom
          @current.columns.inject(@targets[@current]) do |memo, c|
           if handled.any? { |h| /#{h}(?:_id)?/ =~ c.name.to_s } # reference / fk
             memo[:handled][c.name.to_sym] = c
+          elsif /_id$/ =~ c.name.to_s                           # suspicious idx
+            memo[:suppressed][c.name.to_sym] = c
           elsif c.name.to_s == 'type'                           # rails type field
             memo[:suppressed][c.name.to_sym] = c
           elsif @suppressed[@current].is_a?(Array) && @suppressed[@current].any? { |s| s =~ c.name.to_s }
@@ -69,26 +97,34 @@ module FactoryMom
       end
     end
 
-    def code name, **params
+    # Produces a code piece for `FactoryGirl` using raw hash prepared by `produce`.
+    #
+    # Hash as prepared by produce looks like:
+    #
+    #      { :delegates=> [[:trait, [:short], #<Proc:...>]],
+    #        :columns=>
+    #          {:id=> {:column=>..., :generator=>:autoinc, :nullable=>false},
+    #           :text=> {:column=>..., :generator=>:loremipsum, :nullable=>true}},
+    #        :handled=> {:author_id=>..., :post_id=>...},
+    #        :suppressed=> {},
+    #        :params=> {:aliases=> [:комментарий]},
+    #        :reflections=>
+    #          {:after=> {:post=> [:post, :comments, [:this]]},
+    #           :associations=> {:author=> [:writer]},
+    #           :through=> {:owner=> [:user, :post, :this]}}}
+    #
+    # @param [String|Symbol|Class] name the name of class to produce code for
+    # @param [TrueClass|FalseClass] snippet when `false`, will surround code with `FactoryGirl` calls
+    # @param [Hash] params the additional parameters to be passed directly to `FactoryGirl`
+    def code name, snippet: true, **params
       target = produce name, **params, cache: true
- #      { :delegates=> [[:trait, [:short], #<Proc:0x0000000260c5c8@/home/am/Proyectos/Kantox/factory_mom/spec/dsl_spec.rb:15>]],
- #        :columns=>
- #          {:id=> {:column=>..., :generator=>:autoinc, :nullable=>false},
- #           :text=> {:column=>..., :generator=>:loremipsum, :nullable=>true}},
- #        :handled=> {:author_id=>..., :post_id=>...},
- #        :suppressed=> {},
- #        :params=> {:aliases=> [:комментарий]},
- #        :reflections=>
- #          {:after=> {:post=> [:post, :comments, [:this]]},
- #           :associations=> {:author=> [:writer]},
- #           :through=> {:owner=> [:user, :post, :this]}}}
-      factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent] } : {}).to_double_splat
+      factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent], class: name.to_sym } : {}).to_double_splat
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
         "\t\tassociation :#{k}, factory: :#{v.first}, strategy: :create"
-      end.join $/
-      associations = associations.empty? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
+      end.join($/) if target[:reflections][:associations]
+      associations = associations.blank? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
 
       columns = target[:columns].reject do |_, v|
         v[:generator] == :autoinc
@@ -104,18 +140,18 @@ module FactoryMom
       #  this.post = create :post, comments: [this]
       #end
 
-      after = []
-      target[:reflections][:after] && target[:reflections][:after].inject(after) do |memo, (k, v)|
+      after = target[:reflections][:after].inject([]) do |memo, (k, v)|
         memo << if v.length > 1
-                  "this.#{k} = create :#{v.first}, #{v[1]}: [#{v.last.first}]"
+                  # FIXME THIS IS JUST UGLY                   ⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓
+                  "this.#{k} ||= create :#{v.first}, #{v[1]}: #{v.last.inspect.delete(':')}"
                 else
-                  "this.#{k} = [ create :#{v.first} ]"
+                  "this.#{k} ||= [ create :#{v.first} ]"
                 end
-      end
-      after = after.empty? ? "\t\t# this object does not use after hook" : "\t\t# after hook#{$/}\t\tafter(:create, :build, :stub) do |this|#{$/}\t\t\t#{after.join(%Q{$/\t\t\t})}#{$/}\t\tend"
+      end.join("#{$/}\t\t\t") if target[:reflections][:after]
+      after = after.blank? ? "\t\t# this object does not use after hook" : "\t\t# after hook#{$/}\t\tafter(:create, :build, :stub) do |this|#{$/}\t\t\t#{after}#{$/}\t\tend"
 
-      code = <<EOC
-::FactoryGirl.define do
+heredoc = <<EOC
+#{snippet ? nil : '::FactoryGirl.define do'}
 \tfactory :#{factory_title} do
 \t\ttransient do
 \t\t\tshallow false
@@ -126,17 +162,18 @@ module FactoryMom
 #{after}
 # FIXME THROUGH
 \tend
-end
+#{snippet ? nil : 'end'}
 EOC
     end
 
     def instantiate name, **params
       to_be_evaled = [
         %q(require 'factory_girl'),
-        code(name, **params),
-        "object = ::FactoryGirl.create(:#{name})",
-        "binding.pry"
-      ].join $/
+        '::FactoryGirl.define do',
+        *targets.keys.map { |k| code k.to_sym, **params },
+        'end',
+        "object = ::FactoryGirl.create(:#{name})"
+      ].tap {|v| puts '—'*40; puts v; puts '—'*40}.join $/
       Sandbox.class_eval(to_be_evaled)
     end
 

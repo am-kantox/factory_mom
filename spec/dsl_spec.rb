@@ -37,7 +37,7 @@ describe FactoryMom do
     end
 
     it 'might produce code' do
-      expect(FactoryMom.kindergartens[:common].code :comments, aliases: [:комментарий]).to eq %q{::FactoryGirl.define do
+      expect(FactoryMom.kindergartens[:common].code :comments, aliases: [:комментарий]).to eq %q{
 	factory :comments, aliases: [:комментарий] do
 		transient do
 			shallow false
@@ -52,14 +52,14 @@ describe FactoryMom do
 		text { FactoryMom::DSL::Generators.loremipsum }
 		# after hook
 		after(:create, :build, :stub) do |this|
-			this.post = create :post, comments: [this]
+			this.post ||= create :post, comments: [this]
 		end
 # FIXME THROUGH
 	end
-end
+
 }
-      expect(FactoryMom.kindergartens[:common].code :writer).to eq %q{::FactoryGirl.define do
-	factory :writer, parent: :user do
+      expect(FactoryMom.kindergartens[:common].code :writer, snippet: false).to eq %q{::FactoryGirl.define do
+	factory :writer, parent: :user, class: :writer do
 		transient do
 			shallow false
 		end
@@ -75,6 +75,8 @@ end
 }
     end
     it 'might create instances' do
+      binding.pry
+      expect(kindergartens.length).to eq 4
       expect(user_instance.class).to be Comment
     end
   end

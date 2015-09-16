@@ -13,8 +13,12 @@ module FactoryMom
   class << self
     attr_reader :kindergartens
 
-    def define pool: :common, yielding: false
+    def define pool: :common, visor: MODEL_VISOR, yielding: false, finalize: true
       raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
+
+      # Prepare stubs for all known classes
+      harvest! visor: visor, cache: false if finalize
+
       @kindergartens ||= {}
 
       kindergartens[pool] ||= Kindergarten.new
@@ -25,7 +29,25 @@ module FactoryMom
       else
         kindergartens[pool].instance_eval &Proc.new
       end
-      mushrooms pool: pool
+
+      # [AM] FIXME WHAT TO RETURN?
+      # mushrooms pool: pool
+      # kindergartens
+    end
+
+    def harvest! visor: MODEL_VISOR, cache: false
+      (@kindergartens ||= {})[:generic] = nil unless cache
+      (@kindergartens ||= {})[:generic] ||= Kindergarten.new
+
+      classes = kindergartens.dup.inject(visor.flat_targets) do |memo, (_, kg)|
+        memo -= kg.targets.keys
+      end
+
+      define pool: :generic, finalize: false do |kg|
+        classes.each do |klazz|
+          kg.produce klazz
+        end
+      end
     end
 
     def mushrooms pool: :common

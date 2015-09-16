@@ -5,8 +5,7 @@ module FactoryMom
     end
 
     def hook
-      @hook = Proc.new if block_given?
-      @hook
+      @hook = block_given? ? Proc.new : enum_for(:hook)
     end
 
     # Array of all reflections:

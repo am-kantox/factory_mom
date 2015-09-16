@@ -24,6 +24,10 @@ module FactoryMom
     end
     private_class_method :new
 
+    def flat_targets
+      targets.values.inject &:|
+    end
+
     def target! target
       targets! [target]
     end
