@@ -46,24 +46,22 @@ ActiveRecord::Schema.define do
 end
 
 class User < ActiveRecord::Base
-  has_many :posts
+  has_many :posts, inverse_of: :author
 end
 
 class Writer < User
-  # FIXME FIXME FIXME SYNTAX AND IMPLEMENTATION
-  # has_one :parent, class_name: :user, foreign_key: 'parent_id'
+  has_one :moderator, class_name: :user, foreign_key: 'parent_id'
 end
 
 class Post < ActiveRecord::Base
-  has_one :user
+  has_one :author, class_name: :user
   has_many :comments
 end
 
 class Comment < ActiveRecord::Base
   has_one :post
-  # FIXME FIXME FIXME SYNTAX AND IMPLEMENTATION
-  # has_one :writer, as: :author, class_name: :writer
-  has_one :user, as: :owner, through: :posts
+  has_one :author, class_name: :writer
+  has_one :owner, as: :author, through: :posts
 end
 
 Comment.delete_all

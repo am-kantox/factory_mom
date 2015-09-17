@@ -19,8 +19,10 @@ describe FactoryMom do
       end
     end
 
-    let(:user_instance) do
-      FactoryMom.instantiate :comment
+    %i(user writer post comment).each do |who|
+      let(:"#{who}_instance") do
+        FactoryMom.instantiate who
+      end
     end
 
     it 'might produce simple things' do
@@ -50,20 +52,20 @@ describe FactoryMom do
 		text { FactoryMom::DSL::Generators.loremipsum }
 		# after hook
 		after(:create, :build, :stub) do |this|
-			this.post ||= create :post, comments: [this]
+			this.post = ::FactoryGirl.create(:post, comments: [this]) if this.post.blank?
 		end
 # FIXME THROUGH
 	end
 
 }
-      expect(FactoryMom.kindergartens[:common].factory_code :writer, snippet: false).to eq %q{::FactoryGirl.define do
+      expect(FactoryMom.send(:kindergartens)[:common].factory_code :writer, snippet: false).to eq %q{::FactoryGirl.define do
 	factory :writer, parent: :user, class: :writer do
 		transient do
 			shallow false
 		end
 		# this object has no delegates
 		# associations
-		association :parent, factory: :user, strategy: :create
+		association :moderator, factory: :user, strategy: :create
 		# raw columns
 		name { FactoryMom::DSL::Generators.loremipsum }
 		# this object does not use after hook
@@ -74,7 +76,20 @@ end
     end
     it 'might create instances' do
       expect(kindergartens.length).to eq 4
-      expect(user_instance.class).to be Comment
+    end
+    it 'might create instances of User' do
+      expect(user_instance.class).to be User
+      binding.pry
+      expect(puts user_instance.inspect).to be_nil
+    end
+    it 'might create instances of Writer' do
+      expect(writer_instance.class).to be Writer
+    end
+    it 'might create instances of Post' do
+      expect(post_instance.class).to be Post
+    end
+    it 'might create instances of Comment' do
+      expect(comment_instance.class).to be Comment
     end
   end
 end

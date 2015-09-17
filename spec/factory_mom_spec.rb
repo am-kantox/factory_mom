@@ -69,10 +69,10 @@ describe FactoryMom do
       expect(mom.targets.keys).to match_array([ActiveRecord::Base.name.to_sym])
     end
     it 'reads indices properly' do
-      expect(mom.indices.map(&:last).reduce(&:|).map(&:name)).to match_array(["index_posts_on_text", "index_comments_on_text"])
+      expect(mom.indices.values.reduce(&:|).map(&:name)).to match_array(["index_posts_on_text", "index_comments_on_text"])
     end
     it 'reads foreign keys properly' do
-      expect(mom.foreign_keys.map(&:last).reduce(&:|).map(&:name)).to match_array([]) # FIXME On MySQL there must be FKs
+      expect(mom.foreign_keys.values.reduce(&:|).map(&:name)).to match_array([]) # FIXME On MySQL there must be FKs
       skip 'unless I have MySQL tests' do
         pending 'test this on MySQL database to ensure proper functionality'
       end

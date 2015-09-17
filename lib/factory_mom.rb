@@ -16,7 +16,7 @@ module FactoryMom
     def define pool: :common, visor: MODEL_VISOR, yielding: false
       raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
 
-      kindergartens[pool] ||= Kindergarten.new
+      kindergartens[pool] ||= Kindergarten.new visor
 
       # Prepare stubs for all known classes
       visor.flat_targets.each do |klazz|
@@ -42,7 +42,11 @@ module FactoryMom
       unless sandboxes[pool]
         kg = kindergartens[pool]
         sandboxes[pool] = Class.new(Sandbox) do
-          class_eval kg.factories_code as_string: true
+          puts '—'*40
+          puts kg.factories_code as_string: true
+          puts '—'*40
+
+          class_eval (kg.factories_code as_string: true) #.gsub('association', '#association')
         end
       end
 

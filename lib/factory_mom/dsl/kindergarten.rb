@@ -4,7 +4,8 @@ module FactoryMom
     attr_reader :targets
 
     # constructor, preparing targets and suppressed hashes
-    def initialize
+    def initialize visor
+      @visor = visor
       @targets = {}
       @suppressed = {}
       @mx = Mutex.new
@@ -46,7 +47,7 @@ module FactoryMom
     #
     def produce name, cache: false, refactor: true, **params
       target = name.to_class
-      raise MomFail.new self, "FactoryMom Error: producers can not be nested #{name}"  unless @current.nil?
+      raise MomFail.new self, "FactoryMom Error: producers can not be nested (#{name.inspect})"  unless @current.nil?
       return @targets[target] if cache && @targets[target]
 
       @mx.synchronize do
@@ -143,9 +144,9 @@ module FactoryMom
       after = target[:reflections][:after].inject([]) do |memo, (k, v)|
         memo << if v.length > 1
                   # FIXME THIS IS JUST UGLY                   ⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓
-                  "this.#{k} ||= create :#{v.first}, #{v[1]}: #{v.last.inspect.delete(':')}"
+                  "this.#{k} = ::FactoryGirl.create(:#{v.first}, #{v[1]}: #{v.last.inspect.delete(':')}) if this.#{k}.blank?"
                 else
-                  "this.#{k} ||= [ create :#{v.first} ]"
+                  "this.#{k} = [ ::FactoryGirl.create(:#{v.first}, #{name}: this) ] if this.#{k}.blank?"
                 end
       end.join("#{$/}\t\t\t") if target[:reflections][:after]
       after = after.blank? ? "\t\t# this object does not use after hook" : "\t\t# after hook#{$/}\t\tafter(:create, :build, :stub) do |this|#{$/}\t\t\t#{after}#{$/}\t\tend"
@@ -205,9 +206,10 @@ EOC
 
   private
     def reflections target
-      reflections = FactoryMom::MODEL_VISOR.reflections(target).first.last
+      reflections = @visor.reflections(target).map(&:last).reduce(&:merge)
 
       reflections.inject({}) do |memo, (name, r)|
+        # binding.pry
         if r.active_record != target
           memo[:parent] = r.active_record.to_sym
           next memo
@@ -217,7 +219,8 @@ EOC
         when ActiveRecord::Reflection::ThroughReflection
           (memo[:through] ||= {})[r.options[:as] || r.name] = [r.options[:class_name] || r.name.singularize, r.options[:through].singularize, r.collection? ? [:this] : :this]
         when ActiveRecord::Reflection::AssociationReflection
-          symmetry = FactoryMom::MODEL_VISOR.reflections(name).first.last
+          # binding.pry
+          symmetry = @visor.reflections(r.options[:class_name] || name).first.last
           symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
           key = case r.macro
                 when :has_one then [:associations, :after]
@@ -234,7 +237,7 @@ EOC
           raise MomFail.new self, "Kindergarten Error: unhandled reflection «#{r}». Consider to handle!"
         end
         memo
-      end
+      end # .tap { |r| binding.pry if r[:associations] }
     end
   end
 end
