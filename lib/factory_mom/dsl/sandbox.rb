@@ -1,6 +1,6 @@
 require 'factory_girl'
 
 module FactoryMom
-  module Sandbox
+  class Sandbox
   end
 end

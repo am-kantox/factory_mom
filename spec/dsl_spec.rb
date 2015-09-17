@@ -20,9 +20,7 @@ describe FactoryMom do
     end
 
     let(:user_instance) do
-      FactoryMom.define do
-        instantiate :comment
-      end
+      FactoryMom.instantiate :comment
     end
 
     it 'might produce simple things' do
@@ -33,11 +31,11 @@ describe FactoryMom do
       expect(kindergartens.values.last[:delegates].first.first).to eq :trait
       expect(kindergartens.values.last[:delegates].first.last.class).to be Proc
 
-      expect(FactoryMom.mushrooms.length).to eq 4
+      expect(FactoryMom.send(:mushrooms).length).to eq 4
     end
 
     it 'might produce code' do
-      expect(FactoryMom.kindergartens[:common].code :comments, aliases: [:комментарий]).to eq %q{
+      expect(FactoryMom.send(:kindergartens)[:common].factory_code :comments, aliases: [:комментарий]).to eq %q{
 	factory :comments, aliases: [:комментарий] do
 		transient do
 			shallow false
@@ -58,7 +56,7 @@ describe FactoryMom do
 	end
 
 }
-      expect(FactoryMom.kindergartens[:common].code :writer, snippet: false).to eq %q{::FactoryGirl.define do
+      expect(FactoryMom.kindergartens[:common].factory_code :writer, snippet: false).to eq %q{::FactoryGirl.define do
 	factory :writer, parent: :user, class: :writer do
 		transient do
 			shallow false
@@ -75,7 +73,6 @@ end
 }
     end
     it 'might create instances' do
-      binding.pry
       expect(kindergartens.length).to eq 4
       expect(user_instance.class).to be Comment
     end

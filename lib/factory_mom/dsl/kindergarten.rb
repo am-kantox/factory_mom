@@ -116,7 +116,7 @@ module FactoryMom
     # @param [String|Symbol|Class] name the name of class to produce code for
     # @param [TrueClass|FalseClass] snippet when `false`, will surround code with `FactoryGirl` calls
     # @param [Hash] params the additional parameters to be passed directly to `FactoryGirl`
-    def code name, snippet: true, **params
+    def factory_code name, snippet: true, **params
       target = produce name, **params, cache: true
       factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent], class: name.to_sym } : {}).to_double_splat
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
@@ -166,21 +166,34 @@ heredoc = <<EOC
 EOC
     end
 
-    def instantiate name, **params
-      to_be_evaled = [
-        %q(require 'factory_girl'),
-        '::FactoryGirl.define do',
-        *targets.keys.map { |k| code k.to_sym, **params },
-        'end',
-        "object = ::FactoryGirl.create(:#{name})"
-      ].tap {|v| puts '—'*40; puts v; puts '—'*40}.join $/
-      Sandbox.class_eval(to_be_evaled)
+    # Produces a code for all the factories.
+    # If a codeblock is given, the string or array of strings is expected
+    #   to be embedded into generated code
+    # @param [TrueClass|FalseClass] as_string specifies whether the result
+    #  should be returned as string or as an array of strings
+    # @param [TrueClass|FalseClass] cache specifies whether the result should
+    #  be cached between subsequent executions
+    # @return [String|Array] the code generated
+    def factories_code as_string: false, cache: true
+      unless cache && @factories_code && !block_given?
+        to_embed = block_given? ? [yield].flatten : nil
+
+        @factories_code = [
+          %q(require 'factory_girl'),
+          '::FactoryGirl.define do',
+          *targets.keys.map { |k| factory_code k.to_sym, snippet: true },
+          to_embed,
+          'end',
+        ].compact
+      end
+
+      as_string ? @factories_code.join($/) : @factories_code
     end
 
   protected
     # We will delegate to underlying FactoryGirl instance every not known trait
     def method_missing name, *args
-      raise MomFail.new self, "DSL Error: inconsistent call to `#{name}'" unless @targets[@current][:delegates].is_a? Array
+      raise MomFail.new self, "DSL Error: inconsistent call to `#{name}'" unless @targets[@current] && @targets[@current][:delegates].is_a?(Array)
       @targets[@current][:delegates] << (block_given? ? [name, args, Proc.new] : [name, args])
     end
 

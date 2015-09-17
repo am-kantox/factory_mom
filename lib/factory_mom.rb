@@ -11,17 +11,20 @@ require 'factory_mom/dsl/generators'
 
 module FactoryMom
   class << self
-    attr_reader :kindergartens
-
-    def define pool: :common, visor: MODEL_VISOR, yielding: false, finalize: true
+    # @param [FactoryMom::Diagnostics] visor if set, the pool will be preloaded
+    #  with all the models from it; set to `nil` to avoid predefined filling
+    def define pool: :common, visor: MODEL_VISOR, yielding: false
       raise MomFail.new self, "FactoryMom Error: #{__caller__} requires a block" unless block_given?
 
-      # Prepare stubs for all known classes
-      harvest! visor: visor, cache: false if finalize
-
-      @kindergartens ||= {}
-
       kindergartens[pool] ||= Kindergarten.new
+
+      # Prepare stubs for all known classes
+      visor.flat_targets.each do |klazz|
+        kindergartens[pool].instance_eval do
+          produce klazz
+        end
+      end if visor
+
       if yielding
         kindergartens[pool].instance_eval do
           yield self
@@ -31,23 +34,34 @@ module FactoryMom
       end
 
       # [AM] FIXME WHAT TO RETURN?
-      # mushrooms pool: pool
-      # kindergartens
+      mushrooms pool: pool
+      # kindergartens[pool]
     end
 
-    def harvest! visor: MODEL_VISOR, cache: false
-      (@kindergartens ||= {})[:generic] = nil unless cache
-      (@kindergartens ||= {})[:generic] ||= Kindergarten.new
-
-      classes = kindergartens.dup.inject(visor.flat_targets) do |memo, (_, kg)|
-        memo -= kg.targets.keys
-      end
-
-      define pool: :generic, finalize: false do |kg|
-        classes.each do |klazz|
-          kg.produce klazz
+    def instantiate name, pool: :common
+      unless sandboxes[pool]
+        kg = kindergartens[pool]
+        sandboxes[pool] = Class.new(Sandbox) do
+          puts '—'*40
+          puts kg.factories_code
+          puts '—'*40
+          class_eval kg.factories_code as_string: true
         end
       end
+
+      binding.pry
+
+      sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
+    end
+
+  protected
+
+    def kindergartens
+      @kindergartens ||= {}
+    end
+
+    def sandboxes
+      @sandboxes ||= {}
     end
 
     def mushrooms pool: :common
