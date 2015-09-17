@@ -42,14 +42,9 @@ module FactoryMom
       unless sandboxes[pool]
         kg = kindergartens[pool]
         sandboxes[pool] = Class.new(Sandbox) do
-          puts '—'*40
-          puts kg.factories_code
-          puts '—'*40
           class_eval kg.factories_code as_string: true
         end
       end
-
-      binding.pry
 
       sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
     end
