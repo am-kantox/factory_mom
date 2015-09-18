@@ -51,8 +51,14 @@ describe FactoryMom do
 		# raw columns
 		text { FactoryMom::DSL::Generators.loremipsum }
 		# after hook
-		after(:create, :build, :stub) do |this|
+		after(:create) do |this|
 			this.post = ::FactoryGirl.create(:post, comments: [this]) if this.post.blank?
+		end
+		after(:build) do |this|
+			this.post = ::FactoryGirl.build(:post, comments: [this]) if this.post.blank?
+		end
+		after(:stub) do |this|
+			this.post = ::FactoryGirl.stub(:post, comments: [this]) if this.post.blank?
 		end
 # FIXME THROUGH
 	end

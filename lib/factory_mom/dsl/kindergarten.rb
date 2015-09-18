@@ -97,6 +97,7 @@ module FactoryMom
         @targets[@current].tap { @current = nil }
       end
     end
+    alias_method :factory, :produce
 
     # Produces a code piece for `FactoryGirl` using raw hash prepared by `produce`.
     #
@@ -123,7 +124,7 @@ module FactoryMom
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
-        "\t\tassociation :#{k}, factory: :#{v.first}, strategy: :create"
+        "\t\tassociation :#{v[:association]}, factory: :#{v[:class]}, strategy: :create"
       end.join($/) if target[:reflections][:associations]
       associations = associations.blank? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
 
@@ -140,16 +141,31 @@ module FactoryMom
       #after(:create, :build, :stub) do |this|
       #  this.post = create :post, comments: [this]
       #end
-
+      #{ :post=>
+      #   { :association=>:post,
+      #     :class=>:post,
+      #     :collection=>false,
+      #     :inverse=>{:name=>:comment, :association=>:comments, :class=>:comment, :collection=>true, :inverse=>:post}},
+      # :author=>{:association=>:author, :class=>:writer, :collection=>false, :inverse=>:comment}}
       after = target[:reflections][:after].inject([]) do |memo, (k, v)|
-        memo << if v.length > 1
-                  # FIXME THIS IS JUST UGLY                   ⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓⇓
-                  "this.#{k} = ::FactoryGirl.create(:#{v.first}, #{v[1]}: #{v.last.inspect.delete(':')}) if this.#{k}.blank?"
-                else
-                  "this.#{k} = [ ::FactoryGirl.create(:#{v.first}, #{name}: this) ] if this.#{k}.blank?"
-                end
+        begin
+          inverse_code = v[:inverse].is_a?(Hash) ? "#{v[:inverse][:association]}: #{v[:inverse][:collection] ? '[this]' : 'this'}" : "#{v[:inverse]}: this"
+          create_code = "::FactoryGirl.♯(:#{v[:class]}, #{inverse_code})"
+          create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
+          memo << "this.#{k} = #{create_code} if this.#{k}.blank?"
+        rescue => err
+          binding.pry
+        end
       end.join("#{$/}\t\t\t") if target[:reflections][:after]
-      after = after.blank? ? "\t\t# this object does not use after hook" : "\t\t# after hook#{$/}\t\tafter(:create, :build, :stub) do |this|#{$/}\t\t\t#{after}#{$/}\t\tend"
+      # FIXME BUILD AFTER BUILD ETC
+      after = if after.blank?
+                "\t\t# this object does not use after hook"
+              else
+                "\t\t# after hook#{$/}" <<
+                  %w(create build stub).map do |step|
+                    "\t\tafter(:#{step}) do |this|#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
+                  end.join($/)
+              end
 
 heredoc = <<EOC
 #{snippet ? nil : '::FactoryGirl.define do'}
@@ -205,39 +221,51 @@ EOC
     end
 
   private
+    # FIXME Handle lambdas scopes? :as?
+    def reflection_to_attrs name, r, target
+      attrs = (%i(association class collection inverse).zip [
+        (r.name || name).to_sym,
+        (r.options[:class_name] || name).singularize.to_sym, # FIXME maybe singularize only if !collection?
+        r.collection?,
+        (r.options[:inverse_of] || target).to_sym
+      ]).to_h
+
+      inverse = @visor.reflections(attrs[:class]).values.first
+      if inverse && inverse = inverse[attrs[:inverse]] || inverse[target.to_sym.pluralize] # we do not know yet, whether it is a collection or not
+        attrs[:inverse] = (%i(name association class collection inverse).zip [
+          attrs[:inverse],
+          (inverse.name || attrs[:inverse]).to_sym,
+          (inverse.options[:class_name] || attrs[:inverse]).singularize.to_sym,
+          inverse.collection?,
+          (inverse.options[:inverse_of] || r.name || name).to_sym
+        ]).to_h
+      end
+
+      # FIXME Assure that attrs[:inverse][:inverse] == name
+      attrs
+    end
+
     def reflections target
-      reflections = @visor.reflections(target).map(&:last).reduce(&:merge)
+      reflections = @visor.reflections(target)[target]
 
       reflections.inject({}) do |memo, (name, r)|
-        # binding.pry
         if r.active_record != target
           memo[:parent] = r.active_record.to_sym
           next memo
-        end
+        end # FIXME SHOULD I GO NEXT HERE? SEEMS YES; BUT ...
+
+        attrs = reflection_to_attrs name, r, target
 
         case r
         when ActiveRecord::Reflection::ThroughReflection
-          (memo[:through] ||= {})[r.options[:as] || r.name] = [r.options[:class_name] || r.name.singularize, r.options[:through].singularize, r.collection? ? [:this] : :this]
+          (memo[:through] ||= {})[attrs[:association]] = attrs
         when ActiveRecord::Reflection::AssociationReflection
-          # binding.pry
-          symmetry = @visor.reflections(r.options[:class_name] || name).first.last
-          symmetry = symmetry[target.to_sym] || symmetry[target.to_sym.pluralize]
-          key = case r.macro
-                when :has_one then [:associations, :after]
-                when :has_many then [:after, :after]
-                end
-          instantiatable = r.options[:class_name] || r.name.singularize
-          if symmetry.nil?
-            (memo[key.first] ||= {})[r.options[:as] || r.name] = [instantiatable]
-          else
-            symmetry_instantiatable = symmetry.options[:class_name] || symmetry.name
-            (memo[key.last] ||= {})[r.options[:as] || r.name] = [instantiatable, symmetry_instantiatable, symmetry.collection? ? [:this] : :this]
-          end
+          (memo[attrs[:inverse].is_a?(Hash) ? :after : :associations] ||= {})[attrs[:association]] = attrs
         else
           raise MomFail.new self, "Kindergarten Error: unhandled reflection «#{r}». Consider to handle!"
         end
         memo
-      end # .tap { |r| binding.pry if r[:associations] }
+      end #.tap { |r| binding.pry }
     end
   end
 end
