@@ -1,4 +1,4 @@
-require 'factory_girl'
+require 'factory_girl_rails'
 
 module FactoryMom
   class Sandbox

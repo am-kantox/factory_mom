@@ -20,7 +20,7 @@ ActiveRecord::Schema.define do
   create_table :users do |t|
     t.integer :id, null: false
     t.integer :parent_id
-    t.string  :type
+    t.string  :type, default: 'User'
     t.string  :name, null: false
   end unless table_exists? :users
   create_table :posts do |t|
@@ -46,7 +46,7 @@ ActiveRecord::Schema.define do
 end
 
 class User < ActiveRecord::Base
-  has_many :posts, inverse_of: :author
+  has_many :posts
 end
 
 class Writer < User
@@ -54,14 +54,14 @@ class Writer < User
 end
 
 class Post < ActiveRecord::Base
-  has_one :author, class_name: :user
+  belongs_to :author, class_name: :user
   has_many :comments
 end
 
 class Comment < ActiveRecord::Base
-  has_one :post
-  has_one :author, class_name: :writer
-  has_one :owner, as: :author, through: :posts
+  belongs_to :post
+  belongs_to :author, class_name: :writer
+#  has_one :owner, as: :author, through: :posts
 end
 
 Comment.delete_all

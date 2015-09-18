@@ -196,7 +196,7 @@ EOC
         to_embed = block_given? ? [yield].flatten : nil
 
         @factories_code = [
-          %q(require 'factory_girl'),
+          %q(require 'factory_girl_rails'),
           '::FactoryGirl.define do',
           *targets.keys.map { |k| factory_code k.to_sym, snippet: true },
           to_embed,
