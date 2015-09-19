@@ -8,6 +8,14 @@ module FactoryMom
       @hook = block_given? ? Proc.new : enum_for(:hook)
     end
 
+    def parents! *targets
+      return enum_for(:parents!, *targets) unless block_given?
+
+      goal(*targets).each do |klazz|
+        yield [klazz, klazz.ancestors.detect { |e| klazz != e && flat_targets.include?(e) }]
+      end
+    end
+
     # Array of all reflections:
     #     mom.reflections.values.reduce(&:|)
     # @return yields `[Class, [Reflections]]`
@@ -42,9 +50,18 @@ module FactoryMom
       end
     end
 
-    %i(reflections indices foreign_keys).each do |meth|
-      define_method :"#{meth}" do |*targets|
-        reduce public_send(:"#{meth}!", *targets).to_a
+    %i(reflections indices foreign_keys parents).each do |meth|
+      define_method :"#{meth}" do |*targets, unsplat: false|
+        result = reduce public_send(:"#{meth}!", *targets).to_a
+        if unsplat
+          case result.count
+          when 0 then nil
+          when 1 then result.first.last
+          else result.to_a.transpose
+          end
+        else
+          result
+        end
       end
     end
 
@@ -55,8 +72,7 @@ module FactoryMom
     end
 
     def goal *targets
-      goal = self.targets.values.flatten
-      targets.empty? ? goal : (goal & targets.map(&:to_class).compact)
+      targets.empty? ? flat_targets : (flat_targets & targets.map(&:to_class).compact)
     end
 
   end

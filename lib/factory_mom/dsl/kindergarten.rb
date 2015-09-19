@@ -56,10 +56,14 @@ module FactoryMom
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{target}) does not respond to «reflections»" unless target.respond_to?(:reflections)
         raise MomFail.new self, "DSL Error in `#{__callee__}': entity to produce (#{target}) does not respond to «columns»" unless target.respond_to?(:columns)
 
-        @targets[@current = target] = { delegates: [], columns: {}, handled: {}, suppressed: {}, params: params }
+        @targets[@current = target] = { delegates: [], parents: {}, columns: {}, handled: {}, suppressed: {}, params: params }
 
         # start with reflections
         @targets[@current][:reflections] = reflections(@current)
+
+        # collect parents
+        @targets[@current][:parents][:retrospection] = @visor.parents(@current, unsplat: true)
+        @targets[@current][:parents][:active_record] = @targets[@current][:reflections].delete :parent
 
         # stack all traits to be delegated
         instance_eval(&Proc.new) if block_given?
@@ -246,12 +250,12 @@ EOC
     end
 
     def reflections target
-      reflections = @visor.reflections(target)[target]
+      reflections = @visor.reflections(target, unsplat: true)
 
       reflections.inject({}) do |memo, (name, r)|
         if r.active_record != target
           memo[:parent] = r.active_record.to_sym
-          next memo
+          # next memo
         end # FIXME SHOULD I GO NEXT HERE? SEEMS YES; BUT ...
 
         attrs = reflection_to_attrs name, r, target

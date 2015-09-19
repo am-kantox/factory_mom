@@ -80,7 +80,12 @@ describe FactoryMom do
     it 'reads reflections properly' do
       expect(mom.reflections(:user).to_a.length).to eq 1
       expect(mom.reflections(:user, :post).to_a.length).to eq 2
-      expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 8
+      expect(mom.reflections.map(&:last).map(&:count).reduce(&:+)).to eq 7
+    end
+    it 'reads parents properly' do
+      expect(mom.parents(:user).first.last).to be_nil
+      expect(mom.parents(:user, unsplat: true)).to be_nil
+      expect(mom.parents(:writer, unsplat: true).to_sym).to eq :user
     end
     it 'supports hooks on inheritance' do
       hooked = false
