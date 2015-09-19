@@ -111,4 +111,10 @@ module FactoryMom
       self.name.gsub(/(?<=\w)([A-Z])/, '_\1').downcase.to_sym
     end
   end
+  class ::NilClass
+    def to_sym
+      nil
+    end
+  end
+
 end

@@ -62,7 +62,7 @@ module FactoryMom
         @targets[@current][:reflections] = reflections(@current)
 
         # collect parents
-        @targets[@current][:parents][:retrospection] = @visor.parents(@current, unsplat: true)
+        @targets[@current][:parents][:retrospection] = @visor.parents(@current, unsplat: true).to_sym
         @targets[@current][:parents][:active_record] = @targets[@current][:reflections].delete :parent
 
         # stack all traits to be delegated
@@ -124,7 +124,7 @@ module FactoryMom
     # @param [Hash] params the additional parameters to be passed directly to `FactoryGirl`
     def factory_code name, snippet: true, **params
       target = produce name, **params, cache: true
-      factory_params = target[:params].merge(target[:reflections][:parent] ? { parent: target[:reflections][:parent], class: name.to_sym } : {}).to_double_splat
+      factory_params = target[:params].merge(target[:parents][:retrospection] ? { parent: target[:parents][:retrospection], class: name.to_sym } : {}).to_double_splat
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
@@ -254,8 +254,8 @@ EOC
 
       reflections.inject({}) do |memo, (name, r)|
         if r.active_record != target
-          memo[:parent] = r.active_record.to_sym
-          # next memo
+          (memo[:parent] ||= []) << r.active_record.to_sym
+          next memo
         end # FIXME SHOULD I GO NEXT HERE? SEEMS YES; BUT ...
 
         attrs = reflection_to_attrs name, r, target
