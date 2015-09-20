@@ -154,9 +154,9 @@ module FactoryMom
       after = target[:reflections][:after].inject([]) do |memo, (k, v)|
         begin
           inverse_code = v[:inverse].is_a?(Hash) ? "#{v[:inverse][:association]}: #{v[:inverse][:collection] ? '[this]' : 'this'}" : "#{v[:inverse]}: this"
-          create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code})"
+          create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code}, shallow: (evaluator.shallow << :#{name}))"
           create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
-          memo << "this.#{k} = #{create_code} if this.#{k}.blank?"
+          memo << "this.#{k} = #{create_code} if !evaluator.shallow.include?(this.class.to_sym) && this.#{k}.blank?"
         rescue => err
           binding.pry
         end
@@ -167,7 +167,7 @@ module FactoryMom
               else
                 "\t\t# after hook#{$/}" <<
                   %w(create build stub).map do |step|
-                    "\t\tafter(:#{step}) do |this|#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
+                    "\t\tafter(:#{step}) do |this, evaluator|#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
                   end.join($/)
               end
 
@@ -175,7 +175,7 @@ heredoc = <<EOC
 #{snippet ? nil : '::FactoryGirl.define do'}
 \tfactory :#{factory_title} do
 \t\ttransient do
-\t\t\tshallow false
+\t\t\tshallow []
 \t\tend
 #{delegates}
 #{associations}
