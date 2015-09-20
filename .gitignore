@@ -8,3 +8,4 @@
 /spec/reports/
 /tmp/
 test.sqlite3
+generated.rb

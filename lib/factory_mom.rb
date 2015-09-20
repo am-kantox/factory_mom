@@ -42,15 +42,25 @@ module FactoryMom
       unless sandboxes[pool]
         kg = kindergartens[pool]
         sandboxes[pool] = Class.new(Sandbox) do
-          puts '—'*40
-          puts kg.factories_code as_string: true
-          puts '—'*40
+          begin
+            generated = kg.factories_code as_string: true
+            puts '—'*40
+            puts generated
+            puts '—'*40
 
-          class_eval (kg.factories_code as_string: true) #.gsub('association', '#association')
+            File.write('generated.rb', generated)
+            class_eval generated
+          rescue => e
+            puts '='*40
+            puts "==[ERROR]==> #{e}"
+            puts e.backtrace.join $/
+            puts '='*40
+          end
         end
+
       end
 
-      sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
+      sandboxes[pool].class_eval "include FactoryGirl ; ::FactoryGirl.create(:#{name})"
     end
 
   protected

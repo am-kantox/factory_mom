@@ -1,6 +1,9 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 require 'pry'
+require 'factory_girl_rails'
 require 'factory_mom'
+
+ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 # FIXME to test FKs connection should be MySQL!
 ActiveRecord::Base.establish_connection({
@@ -46,21 +49,21 @@ ActiveRecord::Schema.define do
 end
 
 class User < ActiveRecord::Base
-  has_many :posts
+  has_many :posts, inverse_of: :author
 end
 
 class Writer < User
-  has_one :moderator, class_name: :user, foreign_key: 'parent_id'
+  has_one :moderator, class_name: 'User', foreign_key: 'parent_id'
 end
 
 class Post < ActiveRecord::Base
-  belongs_to :author, class_name: :user
+  belongs_to :author, class_name: 'User'
   has_many :comments
 end
 
 class Comment < ActiveRecord::Base
-  belongs_to :post
-  belongs_to :author, class_name: :writer
+  belongs_to :post, foreign_key: 'post_id'
+  belongs_to :author, class_name: 'Writer', foreign_key: 'author_id'
 #  has_one :owner, as: :author, through: :posts
 end
 

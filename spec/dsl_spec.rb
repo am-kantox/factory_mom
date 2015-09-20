@@ -85,7 +85,7 @@ end
     end
     it 'might create instances of User' do
       expect(user_instance.class).to be User
-      binding.pry
+      # binding.pry
       expect(puts user_instance.inspect).to be_nil
     end
     it 'might create instances of Writer' do

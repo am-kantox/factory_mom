@@ -97,7 +97,7 @@ module FactoryMom
           memo
         end
 
-        # binding.pry if @current == Post #Comment
+        # binding.pry if @current == Comment
         @targets[@current].tap { @current = nil }
       end
     end
@@ -128,7 +128,7 @@ module FactoryMom
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
-        "\t\tassociation :#{v[:association]}, factory: :#{v[:class]}, strategy: :create"
+        "\t\tassociation :#{v[:association]}, factory: :#{v[:class].to_class.to_sym}, strategy: :create"
       end.join($/) if target[:reflections][:associations]
       associations = associations.blank? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
 
@@ -154,7 +154,7 @@ module FactoryMom
       after = target[:reflections][:after].inject([]) do |memo, (k, v)|
         begin
           inverse_code = v[:inverse].is_a?(Hash) ? "#{v[:inverse][:association]}: #{v[:inverse][:collection] ? '[this]' : 'this'}" : "#{v[:inverse]}: this"
-          create_code = "::FactoryGirl.♯(:#{v[:class]}, #{inverse_code})"
+          create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code})"
           create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
           memo << "this.#{k} = #{create_code} if this.#{k}.blank?"
         rescue => err
