@@ -84,18 +84,22 @@ end
       expect(kindergartens.length).to eq 4
     end
     it 'might create instances of User' do
-      # expect(user_instance.class).to be User
-      # binding.pry
-      # expect(puts user_instance.inspect).to be_nil
+      expect(user_instance.class).to be User
+      expect(puts user_instance.inspect).to be_nil
     end
     it 'might create instances of Writer' do
       expect(writer_instance.class).to be Writer
+      expect(puts writer_instance.inspect).to be_nil
     end
     it 'might create instances of Post' do
       expect(post_instance.class).to be Post
+      expect(puts post_instance.inspect).to be_nil
+      binding.pry
     end
     it 'might create instances of Comment' do
       expect(comment_instance.class).to be Comment
+      expect(puts comment_instance.inspect).to be_nil
+      binding.pry
     end
   end
 end

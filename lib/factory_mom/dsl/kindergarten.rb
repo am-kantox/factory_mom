@@ -154,9 +154,9 @@ module FactoryMom
       after = target[:reflections][:after].inject([]) do |memo, (k, v)|
         begin
           inverse_code = v[:inverse].is_a?(Hash) ? "#{v[:inverse][:association]}: #{v[:inverse][:collection] ? '[this]' : 'this'}" : "#{v[:inverse]}: this"
-          create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code}, shallow: (evaluator.shallow << :#{name}))"
+          create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code}, shallow: (evaluator.shallow | [:#{name}]))"
           create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
-          memo << "this.#{k} = #{create_code} if !evaluator.shallow.include?(this.class.to_sym) && this.#{k}.blank?"
+          memo << "this.#{k} = #{create_code} if !evaluator.shallow.include?(:#{v[:class].to_class.to_sym}) && this.#{k}.blank?"
         rescue => err
           binding.pry
         end
@@ -167,7 +167,8 @@ module FactoryMom
               else
                 "\t\t# after hook#{$/}" <<
                   %w(create build stub).map do |step|
-                    "\t\tafter(:#{step}) do |this, evaluator|#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
+                    # saver = "\t\t\tthis.save#{$/}" if step == 'create'
+                    "\t\tafter(:#{step}) do |this, evaluator|#{$/}puts 'Creating ' + this.class.name + '[' + (this.id || '') + ']; evaluator: ' + evaluator.shallow.inspect#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
                   end.join($/)
               end
 
