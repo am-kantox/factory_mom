@@ -128,7 +128,7 @@ module FactoryMom
       factory_title = factory_params.empty? ? name : [name, factory_params].join(', ')
 
       associations = target[:reflections][:associations].map do |k, v|
-        "\t\tassociation :#{v[:association]}, factory: :#{v[:class].to_class.to_sym}, strategy: :create"
+        "\t\tassociation :#{v[:association]}, shallow: [:✓], factory: :#{v[:class].to_class.to_sym}, strategy: :create"
       end.join($/) if target[:reflections][:associations]
       associations = associations.blank? ? "\t\t# this object has no associations" : "\t\t# associations#{$/}#{associations}"
 
@@ -156,19 +156,18 @@ module FactoryMom
           inverse_code = v[:inverse].is_a?(Hash) ? "#{v[:inverse][:association]}: #{v[:inverse][:collection] ? '[this]' : 'this'}" : "#{v[:inverse]}: this"
           create_code = "::FactoryGirl.♯(:#{v[:class].to_class.to_sym}, #{inverse_code}, shallow: (evaluator.shallow | [:#{name}]))"
           create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
-          memo << "this.#{k} = #{create_code} if !evaluator.shallow.include?(:#{v[:class].to_class.to_sym}) && this.#{k}.blank?"
+          memo << "this.#{k} = #{create_code} if (evaluator.shallow & [:✓, :#{v[:class].to_class.to_sym}]).empty? && this.#{k}.blank?"
         rescue => err
           binding.pry
         end
       end.join("#{$/}\t\t\t") if target[:reflections][:after]
       # FIXME BUILD AFTER BUILD ETC
       after = if after.blank?
-                "\t\t# this object does not use after hook"
+                "\t\t# this object does not use before hook"
               else
-                "\t\t# after hook#{$/}" <<
-                  %w(create build stub).map do |step|
-                    # saver = "\t\t\tthis.save#{$/}" if step == 'create'
-                    "\t\tafter(:#{step}) do |this, evaluator|#{$/}puts 'Creating ' + this.class.name + '[' + (this.id || '') + ']; evaluator: ' + evaluator.shallow.inspect#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
+                "\t\t# before hook#{$/}" <<
+                  %w(create).map do |step|
+                    "\t\tbefore(:#{step}) do |this, evaluator|#{$/}\t\t\t#{after.gsub('♯', step)}#{$/}\t\tend"
                   end.join($/)
               end
 

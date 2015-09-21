@@ -60,7 +60,7 @@ module FactoryMom
 
       end
 
-      sandboxes[pool].class_eval "include FactoryGirl ; ::FactoryGirl.create(:#{name})"
+      sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
     end
 
   protected

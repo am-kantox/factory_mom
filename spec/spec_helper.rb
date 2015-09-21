@@ -53,7 +53,7 @@ class User < ActiveRecord::Base
 end
 
 class Writer < User
-  has_one :moderator, class_name: 'User', foreign_key: 'parent_id'
+  belongs_to :moderator, class_name: 'User', foreign_key: 'parent_id'
 end
 
 class Post < ActiveRecord::Base
@@ -64,7 +64,7 @@ end
 class Comment < ActiveRecord::Base
   belongs_to :post, foreign_key: 'post_id'
   belongs_to :author, class_name: 'Writer', foreign_key: 'author_id'
-#  has_one :owner, as: :author, through: :posts
+  has_one :owner, as: :author, through: :posts
 end
 
 Comment.delete_all

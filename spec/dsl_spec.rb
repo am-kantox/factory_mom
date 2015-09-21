@@ -19,9 +19,17 @@ describe FactoryMom do
       end
     end
 
+    let(:counters) { {} }
+
     %i(user writer post comment).each do |who|
       let(:"#{who}_instance") do
         FactoryMom.instantiate who
+      end
+    end
+
+    before do
+      %i(user writer post comment).each do |who|
+        counters[:"#{who}_count_before"] = who.to_class.count
       end
     end
 
@@ -47,18 +55,12 @@ describe FactoryMom do
 			puts 'Hello world!'
 		end
 		# associations
-		association :author, factory: :writer, strategy: :create
+		association :author, shallow: [:✓], factory: :writer, strategy: :create
 		# raw columns
 		text { FactoryMom::DSL::Generators.loremipsum }
-		# after hook
-		after(:create) do |this, evaluator|
-			this.post = ::FactoryGirl.create(:post, comments: [this], shallow: (evaluator.shallow << :comments)) if !evaluator.shallow.include?(this.class.to_sym) && this.post.blank?
-		end
-		after(:build) do |this, evaluator|
-			this.post = ::FactoryGirl.build(:post, comments: [this], shallow: (evaluator.shallow << :comments)) if !evaluator.shallow.include?(this.class.to_sym) && this.post.blank?
-		end
-		after(:stub) do |this, evaluator|
-			this.post = ::FactoryGirl.stub(:post, comments: [this], shallow: (evaluator.shallow << :comments)) if !evaluator.shallow.include?(this.class.to_sym) && this.post.blank?
+		# before hook
+		before(:create) do |this, evaluator|
+			this.post = ::FactoryGirl.create(:post, comments: [this], shallow: (evaluator.shallow | [:comments])) if (evaluator.shallow & [:✓, :post]).empty? && this.post.blank?
 		end
 # FIXME THROUGH
 	end
@@ -71,35 +73,50 @@ describe FactoryMom do
 		end
 		# this object has no delegates
 		# associations
-		association :moderator, factory: :user, strategy: :create
+		association :moderator, shallow: [:✓], factory: :user, strategy: :create
 		# raw columns
 		name { FactoryMom::DSL::Generators.loremipsum }
-		# this object does not use after hook
+		# this object does not use before hook
 # FIXME THROUGH
 	end
 end
 }
     end
+
     it 'might create instances' do
       expect(kindergartens.length).to eq 4
     end
     it 'might create instances of User' do
       expect(user_instance.class).to be User
       expect(puts user_instance.inspect).to be_nil
+      expect(User.count).to eq 11
+      expect(Writer.count).to eq 5
+      expect(Post.count).to eq 3
+      expect(Comment.count).to eq 5
     end
     it 'might create instances of Writer' do
       expect(writer_instance.class).to be Writer
       expect(puts writer_instance.inspect).to be_nil
+      expect(User.count).to eq 21
+      expect(Writer.count).to eq 10
+      expect(Post.count).to eq 5
+      expect(Comment.count).to eq 9
     end
     it 'might create instances of Post' do
       expect(post_instance.class).to be Post
       expect(puts post_instance.inspect).to be_nil
-      binding.pry
+      expect(User.count).to eq 26
+      expect(Writer.count).to eq 12
+      expect(Post.count).to eq 6
+      expect(Comment.count).to eq 11
     end
     it 'might create instances of Comment' do
       expect(comment_instance.class).to be Comment
       expect(puts comment_instance.inspect).to be_nil
-      binding.pry
+      expect(User.count).to eq 29
+      expect(Writer.count).to eq 13
+      expect(Post.count).to eq 7
+      expect(Comment.count).to eq 12
     end
   end
 end
