@@ -4,7 +4,7 @@ module FactoryMom
       @strings = []
       @counters = {}
 
-      def string length: 16, spaces: true, strip: true, utf8: true
+      def string length: 16, spaces: true, strip: true, utf8: true, **params
         samples = (utf8 ? ('א'..'ת') : ('a'..'z')).to_a
         λ = lambda do |samples, i| samples.sample end
 
@@ -23,19 +23,19 @@ module FactoryMom
       #       these methods outside of factories, where resetting base is not_to
       #       probable. Take care of this when calling it from everywhere else.
       # @NoWarrantyDisclamer
-      def generic_counter owner: :orphans, length: 2, base: 10
+      def generic_counter owner: :orphans, length: 2, base: 10, **params
         @counters[owner] = (@counters[owner] || 0).next
         @counters[owner].to_s(base).upcase.rjust(length, '0').tap do |val|
           raise MomFail.new self, "Generator Error: #{caller.first[/(?<=`).*?(?=')/]} for «#{owner}» is out of bounds" if val.length != length
         end
       end
 
-      def counter owner: :orphans, length: 2, base: 10
+      def counter owner: :orphans, length: 2, base: 10, **params
         generic_counter owner: owner, length: length, base: base
       end
 
       # @todo Make template not mandatory param if owner was already specified
-      def pattern owner: :orphans, template: '😎«3d»'
+      def pattern owner: :orphans, template: '😎«3d»', **params
         opening, length, base, closing = template.match(/\A(.*?)[\p{Ps}\p{Pi}](\d+)([dDhHaA]?)[\p{Pe}\p{Pf}](.*?)\z/).captures
         base =  case base
                 when 'd', 'D' then 10
@@ -46,7 +46,7 @@ module FactoryMom
         "#{opening}#{generic_counter owner: owner, length: (length || 2).to_i, base: base}#{closing}"
       end
 
-      def loremipsum
+      def loremipsum **params
         string length: 255
       end
 

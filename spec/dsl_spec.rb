@@ -57,7 +57,7 @@ describe FactoryMom do
 		# associations
 		association :author, shallow: [:✓], factory: :writer, strategy: :create
 		# raw columns
-		text { FactoryMom::DSL::Generators.loremipsum }
+		text { FactoryMom::DSL::Generators.loremipsum length: 255 }
 		# before hook
 		before(:create) do |this, evaluator|
 			this.post = ::FactoryGirl.create(:post, comments: [this], shallow: (evaluator.shallow | [:comments])) if (evaluator.shallow & [:✓, :post]).empty? && this.post.blank?
@@ -75,7 +75,7 @@ describe FactoryMom do
 		# associations
 		association :moderator, shallow: [:✓], factory: :user, strategy: :create
 		# raw columns
-		name { FactoryMom::DSL::Generators.loremipsum }
+		name { FactoryMom::DSL::Generators.string length: 16 }
 		# this object does not use before hook
 # FIXME THROUGH
 	end
@@ -117,6 +117,7 @@ end
       expect(Writer.count).to eq 13
       expect(Post.count).to eq 7
       expect(Comment.count).to eq 12
+      # binding.pry
     end
   end
 end

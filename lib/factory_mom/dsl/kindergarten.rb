@@ -89,7 +89,7 @@ module FactoryMom
               generator:  case c.sql_type
                           when 'INTEGER' then :autoinc
                           when 'integer' then :counter
-                          when /\Avarchar\((\d+)\)/ then c.limit < 16 ? :string : :loremipsum
+                          when /\Avarchar\((\d+)\)/ then c.limit < 255 ? :string : :loremipsum
                           end,
               nullable: c.null
             }
@@ -135,7 +135,7 @@ module FactoryMom
       columns = target[:columns].reject do |_, v|
         v[:generator] == :autoinc
       end.map do |k, v| # FIXME add length for strings
-        "\t\t#{k} { FactoryMom::DSL::Generators.#{v[:generator]} }"
+        "\t\t#{k} { FactoryMom::DSL::Generators.#{v[:generator]} length: #{v[:column].limit} }"
       end.join $/
       columns = columns.empty? ? "\t\t# this object has no raw columns" : "\t\t# raw columns#{$/}#{columns}"
 
@@ -158,7 +158,7 @@ module FactoryMom
           create_code = (v[:collection] ? "[ #{create_code}, " : '') + create_code + (v[:collection] ? "]" : '')
           memo << "this.#{k} = #{create_code} if (evaluator.shallow & [:✓, :#{v[:class].to_class.to_sym}]).empty? && this.#{k}.blank?"
         rescue => err
-          binding.pry
+          binding.pry # FIXME
         end
       end.join("#{$/}\t\t\t") if target[:reflections][:after]
       # FIXME BUILD AFTER BUILD ETC

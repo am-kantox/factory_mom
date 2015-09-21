@@ -24,7 +24,7 @@ ActiveRecord::Schema.define do
     t.integer :id, null: false
     t.integer :parent_id
     t.string  :type, default: 'User'
-    t.string  :name, null: false
+    t.string  :name, limit: 16, null: false
   end unless table_exists? :users
   create_table :posts do |t|
     t.integer :id, null: false
@@ -64,7 +64,7 @@ end
 class Comment < ActiveRecord::Base
   belongs_to :post, foreign_key: 'post_id'
   belongs_to :author, class_name: 'Writer', foreign_key: 'author_id'
-  has_one :owner, as: :author, through: :posts
+  has_one :poster, source: :author, through: :post
 end
 
 Comment.delete_all
