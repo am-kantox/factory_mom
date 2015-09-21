@@ -60,7 +60,12 @@ module FactoryMom
 
       end
 
-      sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
+      begin
+        sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
+      rescue => e
+        ActiveRecord::Base.logger.error "Error: instantiate failed for #{name}. Original: [#{e.message}]"
+        ActiveRecord::Base.logger.debug e.backtrace
+      end
     end
 
   protected
