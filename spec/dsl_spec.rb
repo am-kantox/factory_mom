@@ -13,8 +13,9 @@ describe FactoryMom do
         end
         produce :comment, aliases: [:комментарий]  do
           trait :arg1 do
-            puts 'Hello world!'
+            notice { puts 'Hello world!'; 'Hello world!' }
           end
+          arg1
         end
       end
     end
@@ -50,14 +51,16 @@ describe FactoryMom do
 		transient do
 			shallow []
 		end
-		# delegated to factory
-		trait :arg1 do
-			puts 'Hello world!'
-		end
 		# associations
 		association :author, shallow: [:✓], factory: :writer, strategy: :create
 		# raw columns
+		notice { FactoryMom::DSL::Generators.string length: 16 }
 		text { FactoryMom::DSL::Generators.loremipsum length: 255 }
+		# delegated to factory
+		trait :arg1 do
+			notice { puts 'Hello world!'; 'Hello world!' }
+		end
+		arg1
 		# before hook
 		before(:create) do |this, evaluator|
 			this.post = ::FactoryGirl.create(:post, comments: [this], shallow: (evaluator.shallow | [:comments])) if (evaluator.shallow & [:✓, :post]).empty? && this.post.blank?
@@ -71,11 +74,11 @@ describe FactoryMom do
 		transient do
 			shallow []
 		end
-		# this object has no delegates
 		# associations
 		association :moderator, shallow: [:✓], factory: :user, strategy: :create
 		# raw columns
 		name { FactoryMom::DSL::Generators.string length: 16 }
+		# this object has no delegates
 		# this object does not use before hook
 # FIXME THROUGH
 	end

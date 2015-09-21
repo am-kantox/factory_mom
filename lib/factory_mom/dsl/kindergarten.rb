@@ -139,7 +139,16 @@ module FactoryMom
       end.join $/
       columns = columns.empty? ? "\t\t# this object has no raw columns" : "\t\t# raw columns#{$/}#{columns}"
 
-      delegates = target[:delegates].map { |el| "#{el.last.source.rstrip.gsub(/ {4}/, %Q{\t}).gsub(/(?<=\t) {2}/, '')}" }.join $/
+      delegates = target[:delegates].map do |el|
+        case
+        when el.length == 3 # has proc?
+          "#{el.last.source.rstrip.gsub(/ {4}/, %Q{\t}).gsub(/(?<=\t) {2}/, '')}"
+        when el.last.empty?
+          "\t\t#{el.first}"
+        else
+          "\t\t#{el.first} *#{el.last.inspect}"
+        end
+      end.join $/
       delegates = delegates.empty? ? "\t\t# this object has no delegates" : "\t\t# delegated to factory#{$/}#{delegates}"
 
       #after(:create, :build, :stub) do |this|
@@ -177,9 +186,9 @@ heredoc = <<EOC
 \t\ttransient do
 \t\t\tshallow []
 \t\tend
-#{delegates}
 #{associations}
 #{columns}
+#{delegates}
 #{after}
 # FIXME THROUGH
 \tend

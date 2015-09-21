@@ -36,6 +36,7 @@ ActiveRecord::Schema.define do
     t.integer :id, null: false
     t.integer :author_id #, null: false
     t.integer :post_id, null: false
+    t.string  :notice, limit: 16
     t.string  :text
   end unless table_exists? :comments
 
