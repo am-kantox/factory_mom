@@ -194,6 +194,10 @@ heredoc = <<EOC
 \tend
 #{snippet ? nil : 'end'}
 EOC
+
+    rescue => e
+      ActiveRecord::Base.logger.error "Error: factory_code failed for #{name}. Original: [#{e.message}]"
+      ActiveRecord::Base.logger.debug e.backtrace
     end
 
     # Produces a code for all the factories.
