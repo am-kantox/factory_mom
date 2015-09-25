@@ -1,9 +1,9 @@
 ---
-Name: FactoryMom
-Owner: Kantox LTD
-Tags: rails, rspec, testing, factory
-It is of any good?: [Yes](http://news.ycombinator.com/item?id=3067434)
-Travis: [![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
+name: FactoryMom
+owner: Kantox LTD
+tags: [rails, rspec, testing, factory]
+is it of any good?: [Yes](http://news.ycombinator.com/item?id=3067434)
+travis: [![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
 ---
 
 # FactoryMom
