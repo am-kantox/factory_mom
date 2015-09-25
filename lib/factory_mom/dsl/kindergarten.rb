@@ -191,7 +191,7 @@ heredoc = <<EOC
 #{delegates}
 #{after}
 # FIXME THROUGH
-\tend
+\tend unless ::FactoryGirl.factories.any? { |f| f.name == :#{name.to_sym} }
 #{snippet ? nil : 'end'}
 EOC
 
@@ -208,7 +208,7 @@ EOC
     # @param [TrueClass|FalseClass] cache specifies whether the result should
     #  be cached between subsequent executions
     # @return [String|Array] the code generated
-    def factories_code as_string: false, cache: true
+    def factories_code as_string: false, cache: true, checker: true
       unless cache && @factories_code && !block_given?
         to_embed = block_given? ? [yield].flatten : nil
 
@@ -218,6 +218,12 @@ EOC
           *targets.keys.map { |k| factory_code k.to_sym, snippet: true },
           to_embed,
           'end',
+          '',
+          'class << ::FactoryMom',
+          "\tdef create_all",
+          *targets.keys.map { |k| "\t\t::FactoryMom.instantiate #{k.to_sym.inspect}" },
+          "\tend",
+          'end'
         ].compact
       end
 

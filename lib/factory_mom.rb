@@ -45,10 +45,6 @@ module FactoryMom
         sandboxes[pool] = Class.new(Sandbox) do
           begin
             generated = kg.factories_code as_string: true
-            puts '—'*40
-            puts generated
-            puts '—'*40
-
             File.write('generated.rb', generated)
             class_eval generated
           rescue => e
@@ -58,16 +54,20 @@ module FactoryMom
             puts '='*40
           end
         end
-
       end
 
-      begin
-        sandboxes[pool].class_eval "::FactoryGirl.create(:#{name})"
-      rescue => e
-        ActiveRecord::Base.logger.error "Error: instantiate failed for #{name}. Original: [#{e.message}]"
-        ActiveRecord::Base.logger.debug e.backtrace
+      sandboxes[pool].class_eval do
+        FactoryMom::Selfcare::ActiveRecordBaseChecker.with_error_capturing do
+          ::FactoryGirl.create(name.to_sym).tap do |inst|
+            ((@@mushrooms ||= {})[name.to_sym] ||= []) << inst
+          end
+        end.tap do |arbc|
+          (@@instances ||= []) << arbc
+        end.result
       end
+
     end
+    alias_method :create, :instantiate
 
   protected
 

@@ -2,7 +2,7 @@ module FactoryMom
   module Selfcare
     # NB Not thread safe!!! See ugly `@capturing`.
     class ActiveRecordBaseChecker
-      attr_accessor :active_record_errors
+      attr_reader :result, :active_record_errors
 
       def initialize handler = nil
         @error_reporter = lambda do |receiver, error|
@@ -18,9 +18,12 @@ module FactoryMom
 
       def with_error_capturing
         raise "Erroneous call to #{__callee__}. No codeblock given." unless block_given?
-        start_capturing &@error_reporter
-        Proc.new.call
-        stop_capturing
+        begin
+          start_capturing &@error_reporter
+          @result = Proc.new.call
+        ensure
+          stop_capturing
+        end
       end
 
       def self.with_error_capturing error_reporter = nil
@@ -28,7 +31,7 @@ module FactoryMom
         cb = Proc.new # to pass to closure
         ActiveRecordBaseChecker.new(error_reporter).tap do |arbc|
           arbc.with_error_capturing &cb
-        end.active_record_errors
+        end
       end
 
     private
