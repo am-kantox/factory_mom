@@ -8,6 +8,7 @@ require 'factory_mom/active_record_base'
 require 'factory_mom/dsl/sandbox'
 require 'factory_mom/dsl/kindergarten'
 require 'factory_mom/dsl/generators'
+require 'factory_mom/selfcare/active_record_base_checker'
 
 module FactoryMom
   class << self
