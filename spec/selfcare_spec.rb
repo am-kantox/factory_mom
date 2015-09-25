@@ -16,4 +16,8 @@ describe FactoryMom::Selfcare::ActiveRecordBaseChecker do
       expect(puts subject.active_record_errors).to be_nil
     end
   end
+
+  it 'properly executes as static' do
+    expect(FactoryMom::Selfcare::ActiveRecordBaseChecker.with_error_capturing { Post.create }.to_a.last.last.last.class).to eq ActiveRecord::StatementInvalid 
+  end
 end

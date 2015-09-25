@@ -25,7 +25,10 @@ module FactoryMom
 
       def self.with_error_capturing error_reporter = nil
         raise "Erroneous call to #{__callee__}. No codeblock given." unless block_given?
-        ActiveRecordBaseChecker.new(error_reporter).with_error_capturing &Proc.new
+        cb = Proc.new # to pass to closure
+        ActiveRecordBaseChecker.new(error_reporter).tap do |arbc|
+          arbc.with_error_capturing &cb
+        end.active_record_errors
       end
 
     private
