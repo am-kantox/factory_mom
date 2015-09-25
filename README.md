@@ -1,6 +1,12 @@
-# FactoryMom
+---
+Name: FactoryMom
+Owner: Kantox LTD
+Tags: rails, rspec, testing, factory
+It is of any good?: [Yes](http://news.ycombinator.com/item?id=3067434)
+Travis: [![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
+---
 
-[![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
+# FactoryMom
 
 `FactoryMom` is a `Factory` for `FactoryGirl` factories. Yeah, I like how the phrase sounds. Syllabics in action.
 
