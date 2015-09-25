@@ -1,14 +1,15 @@
 ---
-name: FactoryMom
-owner: Kantox LTD
+name: 'FactoryMom'
+owner: 'Kantox LTD'
 tags: [rails, rspec, testing, factory]
-is it of any good?: [Yes](http://news.ycombinator.com/item?id=3067434)
-travis: [![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
 ---
 
 # FactoryMom
 
 `FactoryMom` is a `Factory` for `FactoryGirl` factories. Yeah, I like how the phrase sounds. Syllabics in action.
+
+##### Is it of any good?: [Yes](http://news.ycombinator.com/item?id=3067434)
+##### [![Build Status](https://travis-ci.org/am-kantox/factory_mom.svg?branch=master)](https://travis-ci.org/am-kantox/factory_mom)
 
 #### Usage
 
