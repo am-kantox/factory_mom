@@ -11,7 +11,8 @@ describe FactoryMom do
         produce :post do
           suppress :title
         end
-        produce :comment, aliases: [:комментарий]  do
+        factory :comment, aliases: [:комментарий]  do
+          notice 'Hello world!'
           trait :arg1 do
             notice { puts 'Hello world!'; 'Hello world!' }
           end
@@ -39,8 +40,8 @@ describe FactoryMom do
       expect(kindergartens.length).to eq 4
       expect(kindergartens.keys).to match_array [User, Writer, Post, Comment]
       expect(kindergartens.values.last.class).to be Hash
-      expect(kindergartens.values.last[:delegates].first.first).to eq :trait
-      expect(kindergartens.values.last[:delegates].first.last.class).to be Proc
+      expect(kindergartens.values.last[:delegates].first).to match_array [:notice, ["Hello world!"]]
+      expect(kindergartens.values.last[:delegates][1].last.class).to be Proc
 
       expect(FactoryMom.send(:mushrooms).length).to eq 4
     end
@@ -54,9 +55,9 @@ describe FactoryMom do
 		# associations
 		association :author, shallow: [:✓], factory: :writer, strategy: :create
 		# raw columns
-		notice { FactoryMom::DSL::Generators.string length: 16 }
 		text { FactoryMom::DSL::Generators.loremipsum length: 255 }
 		# delegated to factory
+		notice *["Hello world!"]
 		trait :arg1 do
 			notice { puts 'Hello world!'; 'Hello world!' }
 		end
@@ -123,6 +124,7 @@ end
     end
     it 'might create instances of Comment' do
       expect(comment_instance.class).to be Comment
+      expect(comment_instance.notice).to eql 'Hello world!'
       expect(puts comment_instance.inspect).to be_nil
       expect(User.count - @uc).to eq 3
       expect(Writer.count - @wc).to eq 1
